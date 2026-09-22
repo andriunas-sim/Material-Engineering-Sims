@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How hot does a bond have to get? – Bonding energy explorer</title>
+<style>
+:root{
+  --paper:#eef3f6;
+  --grid:#dbe5ec;
+  --card:#ffffff;
+  --ink:#14213d;
+  --muted:#56637a;
+  --line:#c9d5de;
+  --curve:#0b6e79;
+  --curve-soft:#e3f1f2;
+  --heat:#e0892b;
+  --bad:#c2362b;
+  --warn:#b8791a;
+  --ok:#2f7d4f;
+  --focus:#1d5fd1;
+  font-size:clamp(13px, 0.5vw + 8px, 20px);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  color:var(--ink);
+  font-family:Bahnschrift,"DIN Alternate","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  background-color:var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size:24px 24px;
+}
+.app{
+  height:100%;
+  display:grid;
+  grid-template-columns:minmax(0,1.65fr) minmax(19rem,1fr);
+  grid-template-rows:auto minmax(0,1fr);
+  gap:.75rem;
+  padding:.85rem;
+}
+header{grid-column:1/-1}
+h1{font-size:1.75rem;line-height:1.1;margin:0;font-weight:700;letter-spacing:-.01em}
+.sub{margin:.2rem 0 0;color:var(--muted);font-size:1rem}
+.plot{background:var(--card);border:1px solid var(--line);border-radius:6px;min-height:0;position:relative;overflow:hidden}
+canvas{display:block;width:100%;height:100%}
+.panel{display:flex;flex-direction:column;gap:.6rem;min-height:0;overflow:auto}
+.group{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:.75rem .85rem}
+.group h2{font-size:1.05rem;margin:0 0 .5rem;font-weight:700}
+.bonds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.35rem}
+.bond{
+  font:inherit;text-align:left;cursor:pointer;color:var(--ink);
+  background:#fff;border:1.5px solid var(--line);border-radius:4px;padding:.35rem .5rem;
+}
+.bond b{display:block;font-size:1.2rem;line-height:1.2}
+.bond span{display:block;font-size:.72rem;color:var(--muted);line-height:1.2}
+.bond[aria-pressed="true"]{border-color:var(--curve);background:var(--curve-soft);box-shadow:inset 3px 0 0 var(--curve)}
+.where{margin:.55rem 0 0;font-size:.85rem;line-height:1.35}
+.row{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem}
+.big{font-size:1.35rem;font-weight:700;font-variant-numeric:tabular-nums}
+.small{font-size:.8rem;color:var(--muted)}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:1.6rem;margin:.2rem 0 .35rem;cursor:pointer;background:transparent;
+  --track:linear-gradient(90deg,#8fb8e0 0%,#f3d9a6 14%,#e0892b 42%,#c2362b 72%,#7a1f8f 100%);
+}
+input[type=range]::-webkit-slider-runnable-track{height:.55rem;border-radius:999px;background:var(--track)}
+input[type=range]::-moz-range-track{height:.55rem;border-radius:999px;background:var(--track)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:1.25rem;height:1.25rem;margin-top:-.35rem;border-radius:50%;
+  background:#fff;border:3px solid var(--ink);
+}
+input[type=range]::-moz-range-thumb{width:1rem;height:1rem;border-radius:50%;background:#fff;border:3px solid var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:.3rem}
+.chip{
+  font:inherit;font-size:.78rem;cursor:pointer;color:var(--ink);
+  background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:.2rem .6rem;
+}
+.chip:hover,.bond:hover{border-color:var(--ink)}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.35rem;margin-top:.6rem}
+.stat{border-top:3px solid var(--line);padding-top:.3rem}
+.stat .k{font-size:.75rem;color:var(--muted);line-height:1.2}
+.stat .v{font-size:1.45rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15}
+.stat .u{font-size:.7rem;color:var(--muted)}
+.stat.bondc{border-color:var(--ink)}
+.stat.heatc{border-color:var(--heat)}
+.verdict{margin-top:.6rem;padding:.45rem .6rem;border-left:5px solid var(--ok);background:#f3f7f4;border-radius:0 4px 4px 0}
+.verdict b{display:block;font-size:1.05rem}
+.verdict span{font-size:.85rem;color:var(--muted)}
+.verdict.warn{border-color:var(--warn);background:#fbf5ea}
+.verdict.hot{border-color:var(--heat);background:#fcf1e6}
+.verdict.bad{border-color:var(--bad);background:#fbeeed}
+.formula{font-size:.8rem;color:var(--muted);margin:.5rem 0 0}
+.note{font-size:.72rem;color:var(--muted);margin:0 .1rem;line-height:1.35}
+button:focus-visible,input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto 55vh auto;height:auto}
+  .panel{overflow:visible}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>How hot does a bond have to get?</h1>
+    <p class="sub">Heat shakes the two atoms. The bond holds until the shaking gets close to the bond energy.</p>
+  </header>
+
+  <div class="plot"><canvas id="plot" role="img" aria-label="Energy against distance between two bonded atoms, showing the bond energy well and the thermal energy available"></canvas></div>
+
+  <aside class="panel">
+    <section class="group">
+      <h2>1. Pick a bond</h2>
+      <div class="bonds" id="bonds"></div>
+      <p class="where" id="where"></p>
+    </section>
+
+    <section class="group">
+      <h2>2. Heat it up</h2>
+      <div class="row">
+        <label for="tempSlider" class="small">Temperature</label>
+        <span class="big" id="tempOut">20 °C</span>
+      </div>
+      <input type="range" id="tempSlider" min="0" max="1000" step="1" value="99">
+      <div class="chips" id="tempChips"></div>
+      <div class="stats">
+        <div class="stat bondc"><div class="k">Bond energy</div><div class="v" id="hBond">348</div><div class="u">kJ/mol</div></div>
+        <div class="stat heatc"><div class="k">Heat energy</div><div class="v" id="hHeat">2.4</div><div class="u">kJ/mol</div></div>
+        <div class="stat"><div class="k">Bond is bigger by</div><div class="v" id="hRatio">142×</div><div class="u">times</div></div>
+      </div>
+      <div class="verdict" id="heatVerdict"><b></b><span></span></div>
+      <p class="formula">Heat energy ≈ R × T, with R = 8.314 J/(mol·K) and T in kelvin.</p>
+    </section>
+
+    <p class="note">This is one bond being torn apart, which is what happens to gases in a shock layer or an arc. Melting and boiling are different processes and need more than this picture. Bond energies are typical values; curve shapes are illustrative (Morse potential).</p>
+  </aside>
+</div>
+
+<noscript><p style="padding:1rem">This simulation needs JavaScript switched on.</p></noscript>
+
+<script>
+(() => {
+'use strict';
+
+const R = 8.314;      // J/(mol K)
+const RMAX = 400;     // pm, right edge of the plot
+const TMIN_K = 200, TMAX_K = 30273;
+const Y_MIN = -1250, Y_MAX = 300;
+
+// D: bond energy (kJ/mol), r0: bond length (pm), a: Morse width (1/pm), order: lines drawn
+const BONDS = [
+  {id:'CC', label:'C–C', note:'In plastics', D:348, r0:154, a:0.020, A:'C', B:'C', order:1,
+   where:'The backbone of every plastic. A plasma cutting arc is one of the few places hot enough to tear these apart rather than just melt the material.'},
+  {id:'CH', label:'C–H', note:'In fuels', D:413, r0:109, a:0.018, A:'C', B:'H', order:1,
+   where:'Petrol, diesel and methane are mostly C–H bonds. Burning breaks them and makes stronger bonds to oxygen instead, which is where the energy comes from.'},
+  {id:'HH', label:'H–H', note:'Hydrogen gas', D:432, r0:74, a:0.0194, A:'H', B:'H', order:1,
+   where:'The bond on the lecture slide, at 432 kJ/mol. Hydrogen only splits into single atoms at a few thousand degrees.'},
+  {id:'OO', label:'O=O', note:'Oxygen in air', D:498, r0:121, a:0.0265, A:'O', B:'O', order:2,
+   where:'A fifth of the air you are breathing. In the shock layer in front of a re-entry capsule it splits into single oxygen atoms, which is why re-entry heating is chemical as well as thermal.'},
+  {id:'NN', label:'N≡N', note:'Nitrogen in air', D:945, r0:110, a:0.0269, A:'N', B:'N', order:3,
+   where:'Most of the air, and very hard to break. At the same re-entry temperature that splits oxygen, nitrogen mostly survives. Compare the two ratios at 5 000 °C.'},
+  {id:'CO', label:'C≡O', note:'Carbon monoxide', D:1077, r0:113, a:0.023, A:'C', B:'O', order:3,
+   where:'The strongest bond here. In a blast furnace, carbon strips oxygen out of iron ore because forming this bond releases so much energy.'}
+];
+const TEMPS = [
+  {label:'Room', c:20},
+  {label:'Blast furnace', c:1600},
+  {label:'Re-entry shock', c:5000},
+  {label:'Surface of the Sun', c:5500},
+  {label:'Plasma cutting arc', c:20000},
+  {label:'Lightning channel', c:30000}
+];
+const ATOM_STYLE = {
+  H:{fill:'#f4f6f8', stroke:'#8a96a8', text:'#14213d'},
+  C:{fill:'#3a4150', stroke:'#1f242e', text:'#ffffff'},
+  N:{fill:'#3b5bb5', stroke:'#26397a', text:'#ffffff'},
+  O:{fill:'#d9483b', stroke:'#9e2d23', text:'#ffffff'}
+};
+
+const S = { bond: BONDS[0], tC: 20, theta: 0 };
+
+function clamp(v, lo, hi){ return Math.min(hi, Math.max(lo, v)); }
+
+/* slider position (0–1000) <-> temperature, stretched so everyday values stay usable */
+const POW = 2.5;
+const posToK = v => TMIN_K + Math.pow(v / 1000, POW) * (TMAX_K - TMIN_K);
+const kToPos = K => 1000 * Math.pow(clamp((K - TMIN_K) / (TMAX_K - TMIN_K), 0, 1), 1 / POW);
+
+/* URL options: ?bond=OO&T=5000 */
+const qs = new URLSearchParams(location.search);
+const qb = BONDS.find(b => b.id.toLowerCase() === (qs.get('bond') || '').toLowerCase());
+if (qb) S.bond = qb;
+if (qs.has('T') && isFinite(+qs.get('T'))) S.tC = +qs.get('T');
+S.tC = clamp(S.tC, TMIN_K - 273.15, TMAX_K - 273.15);
+
+const $ = id => document.getElementById(id);
+const U = (r, b) => b.D * ((1 - Math.exp(-b.a * (r - b.r0))) ** 2 - 1);
+
+function fmt(v){
+  if (!isFinite(v)) return '∞';
+  if (Number.isInteger(v)) return v.toLocaleString('en-GB');
+  const a = Math.abs(v);
+  if (a >= 100) return Math.round(v).toLocaleString('en-GB');
+  if (a >= 10) return v.toFixed(0);
+  return v.toFixed(1);
+}
+function turningPoints(b, E){
+  const s = E / b.D;
+  const q = Math.sqrt(Math.max(0, s));
+  return [b.r0 - Math.log(1 + q) / b.a, s >= 1 ? Infinity : b.r0 - Math.log(1 - q) / b.a, s];
+}
+const kelvin = () => S.tC + 273.15;
+const RTnow = () => R * kelvin() / 1000;   // kJ/mol
+
+/* ---------- controls ---------- */
+BONDS.forEach(b => {
+  const btn = document.createElement('button');
+  btn.className = 'bond';
+  btn.dataset.id = b.id;
+  btn.innerHTML = `<b>${b.label}</b><span>${b.note}</span><span>${b.D} kJ/mol</span>`;
+  btn.addEventListener('click', () => { S.bond = b; refresh(); });
+  $('bonds').appendChild(btn);
+});
+TEMPS.forEach(t => {
+  const c = document.createElement('button');
+  c.className = 'chip';
+  c.textContent = `${t.label} ${t.c.toLocaleString('en-GB')} °C`;
+  c.addEventListener('click', () => { S.tC = t.c; $('tempSlider').value = kToPos(t.c + 273.15); refresh(); });
+  $('tempChips').appendChild(c);
+});
+$('tempSlider').value = kToPos(kelvin());
+$('tempSlider').addEventListener('input', e => { S.tC = posToK(+e.target.value) - 273.15; refresh(); });
+
+function setVerdict(cls, title, text){
+  const el = $('heatVerdict');
+  el.className = 'verdict' + (cls ? ' ' + cls : '');
+  el.querySelector('b').textContent = title;
+  el.querySelector('span').textContent = text;
+}
+function roundT(c){ return c < 1000 ? Math.round(c) : Math.round(c / 10) * 10; }
+
+function refresh(){
+  const b = S.bond, rt = RTnow(), ratio = rt > 0 ? b.D / rt : Infinity;
+  document.querySelectorAll('.bond').forEach(el => el.setAttribute('aria-pressed', el.dataset.id === b.id));
+  $('where').textContent = b.where;
+  $('tempOut').textContent = `${roundT(S.tC).toLocaleString('en-GB')} °C (${Math.round(kelvin()).toLocaleString('en-GB')} K)`;
+  $('hBond').textContent = fmt(b.D);
+  $('hHeat').textContent = fmt(rt);
+  $('hRatio').textContent = isFinite(ratio) ? fmt(ratio) + '×' : '∞';
+  if (ratio >= 40)      setVerdict('', 'Barely touched', 'The shaking is tiny next to the bond. Almost nothing breaks.');
+  else if (ratio >= 15) setVerdict('warn', 'A few break', 'The unluckiest atoms now get enough energy to come apart.');
+  else if (ratio >= 1)  setVerdict('hot', 'Breaking in large numbers', 'A big share of these bonds are torn apart at any moment.');
+  else                  setVerdict('bad', 'Torn apart', 'The average shake is bigger than the bond. Only free atoms survive.');
+}
+
+/* ---------- canvas ---------- */
+const cv = $('plot');
+const ctx = cv.getContext('2d');
+let W = 0, H = 0, dpr = 1;
+function resize(){
+  const r = cv.getBoundingClientRect();
+  dpr = window.devicePixelRatio || 1;
+  W = r.width; H = r.height;
+  cv.width = Math.max(1, Math.round(W * dpr));
+  cv.height = Math.max(1, Math.round(H * dpr));
+}
+new ResizeObserver(resize).observe(cv);
+resize();
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function niceStep(range, n){
+  const raw = range / n, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+  return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10) * p;
+}
+
+let rNow = S.bond.r0, Evib = 0, broken = false, last = performance.now();
+
+function step(dt){
+  const b = S.bond;
+  S.theta += dt * (reduceMotion ? 2 : 7);
+  Evib = RTnow();
+  const [, , s] = turningPoints(b, Evib);
+  if (s >= 1) { broken = true; rNow = RMAX; return; }
+  broken = false;
+  rNow = b.r0 - Math.log(1 - Math.sqrt(s) * Math.sin(S.theta)) / b.a;
+}
+
+function draw(){
+  const b = S.bond;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  if (W < 50 || H < 50) return;
+
+  const fs = clamp(W / 52, 11, 19);
+  const font = w => `${w} ${fs}px Bahnschrift, "DIN Alternate", "Segoe UI", system-ui, sans-serif`;
+  const stripH = clamp(H * 0.18, 64, 120);
+  const x0 = fs * 5.0, x1 = W - fs * 1.2;
+  const y0 = stripH + fs * 1.4, y1 = H - fs * 3.4;
+  const X = r => x0 + r / RMAX * (x1 - x0);
+  const Y = u => y0 + (Y_MAX - u) / (Y_MAX - Y_MIN) * (y1 - y0);
+  const pxPerPm = (x1 - x0) / RMAX;
+
+  /* grid, axes */
+  ctx.lineWidth = 1; ctx.strokeStyle = '#e4ebf0'; ctx.fillStyle = '#56637a';
+  ctx.font = font('400'); ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let r = 0; r <= RMAX; r += 100) {
+    ctx.beginPath(); ctx.moveTo(X(r), y0); ctx.lineTo(X(r), y1); ctx.stroke();
+    ctx.fillText(r, X(r), y1 + fs * 0.35);
+  }
+  const ys = niceStep(Y_MAX - Y_MIN, 8);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let u = Math.ceil(Y_MIN / ys) * ys; u <= Y_MAX + 1e-9; u += ys) {
+    ctx.beginPath(); ctx.moveTo(x0, Y(u)); ctx.lineTo(x1, Y(u)); ctx.stroke();
+    ctx.fillText(fmt(u), x0 - fs * 0.4, Y(u));
+  }
+  ctx.strokeStyle = '#14213d'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0, y1); ctx.lineTo(x1, y1); ctx.stroke();
+
+  ctx.fillStyle = '#14213d'; ctx.font = font('600');
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText('Distance between the atoms (pm, 1 pm = 10⁻¹² m)', (x0 + x1) / 2, H - fs * 0.3);
+  ctx.save();
+  ctx.translate(fs * 1.1, (y0 + y1) / 2); ctx.rotate(-Math.PI / 2);
+  ctx.textBaseline = 'middle'; ctx.fillText('Energy (kJ/mol)', 0, 0);
+  ctx.restore();
+
+  /* zero line */
+  ctx.strokeStyle = '#14213d'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x0, Y(0)); ctx.lineTo(x1, Y(0)); ctx.stroke();
+  ctx.font = font('400'); ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  ctx.fillText('0 = two separate atoms (bond broken)', X(b.r0) + fs * 2, Y(0) - fs * 0.25);
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.clip();
+
+  // floor of the well
+  ctx.strokeStyle = '#0b6e79'; ctx.lineWidth = 1; ctx.setLineDash([6, 5]);
+  ctx.beginPath(); ctx.moveTo(x0, Y(-b.D)); ctx.lineTo(x1, Y(-b.D)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // shaking energy fill
+  if (Evib > 0) {
+    const [r1, r2raw] = turningPoints(b, Evib);
+    const r2 = Math.min(r2raw, RMAX);
+    const level = -b.D + Evib;
+    const stepR = 1 / pxPerPm;
+    ctx.beginPath(); ctx.moveTo(X(r1), Y(level));
+    for (let r = r1; r <= r2; r += stepR) ctx.lineTo(X(r), Y(U(r, b)));
+    ctx.lineTo(X(r2), Y(U(r2, b))); ctx.lineTo(X(r2), Y(level)); ctx.closePath();
+    ctx.fillStyle = 'rgba(224,137,43,0.28)'; ctx.fill();
+    ctx.strokeStyle = '#e0892b'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(X(r1), Y(level)); ctx.lineTo(X(r2), Y(level)); ctx.stroke();
+  }
+
+  // curve
+  ctx.strokeStyle = '#0b6e79'; ctx.lineWidth = 3.5; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  let started = false;
+  for (let px = x0; px <= x1; px += 1) {
+    const r = Math.max((px - x0) / pxPerPm, 1);
+    const yy = Math.max(Y(U(r, b)), y0 - 50);
+    if (!started) { ctx.moveTo(px, yy); started = true; } else ctx.lineTo(px, yy);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  /* arrows: bond energy against heat energy */
+  const ax1 = X(330), ax2 = X(372), floorY = Y(-b.D);
+  drawArrow(ax1, floorY, Y(0), '#14213d', clamp(fs * 0.3, 3, 6), y0);
+  drawArrow(ax2, floorY, Y(-b.D + RTnow()), '#e0892b', clamp(fs * 0.3, 3, 6), y0);
+  ctx.font = font('700'); ctx.fillStyle = '#14213d';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('Bond', ax1, floorY + fs * 0.4);
+  ctx.fillText('Heat', ax2, floorY + fs * 0.4);
+  ctx.font = font('400');
+  ctx.fillText(fmt(b.D), ax1, floorY + fs * 1.5);
+  ctx.fillText(fmt(RTnow()), ax2, floorY + fs * 1.5);
+
+  ctx.font = font('600'); ctx.fillStyle = '#0b6e79';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  ctx.fillText(`−${fmt(b.D)}`, x0 + fs * 0.3, floorY - fs * 0.15);
+
+  // point on the curve
+  const rc = Math.min(rNow, RMAX);
+  const dotX = X(rc), dotY = Y(U(rc, b));
+  ctx.beginPath(); ctx.arc(dotX, dotY, clamp(fs * 0.5, 5, 9), 0, Math.PI * 2);
+  ctx.fillStyle = '#14213d'; ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
+
+  /* atoms */
+  const cy = stripH / 2 + fs * 0.2;
+  ctx.fillStyle = '#f5f8fa'; ctx.fillRect(0, 0, W, stripH);
+  ctx.strokeStyle = '#c9d5de'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, stripH + 0.5); ctx.lineTo(W, stripH + 0.5); ctx.stroke();
+
+  const rad = clamp(0.5 * b.r0 * pxPerPm, 14, stripH * 0.34);
+  const xa = X(0), xb = X(rNow);
+  const strength = clamp(-U(rc, b) / b.D, 0, 1);
+
+  ctx.strokeStyle = 'rgba(20,33,61,0.35)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(dotX, dotY - fs * 0.6); ctx.lineTo(xb, cy + rad); ctx.stroke();
+  ctx.setLineDash([]);
+
+  if (strength > 0.02 && !broken) {
+    const gap = clamp(rad * 0.3, 5, 10);
+    ctx.strokeStyle = `rgba(20,33,61,${0.25 + 0.6 * strength})`;
+    ctx.lineWidth = clamp(fs * 0.28, 3, 5);
+    for (let i = 0; i < b.order; i++) {
+      const off = (i - (b.order - 1) / 2) * gap;
+      ctx.beginPath(); ctx.moveTo(xa, cy + off); ctx.lineTo(xb, cy + off); ctx.stroke();
+    }
+  }
+  drawAtom(xa, cy, rad, b.A, font);
+  drawAtom(xb, cy, rad, b.B, font);
+
+  ctx.font = font('400'); ctx.fillStyle = '#56637a';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText(`${Math.round(rNow)} pm`, xb, cy + rad + 2);
+
+  ctx.textAlign = 'right'; ctx.font = font('700');
+  if (broken) { ctx.fillStyle = '#c2362b'; ctx.fillText('Torn apart', W - fs * 0.8, fs * 0.5); }
+  else { ctx.fillStyle = '#2f7d4f'; ctx.fillText('Holding together', W - fs * 0.8, fs * 0.5); }
+}
+
+function drawArrow(x, yFrom, yTo, colour, w, yTop){
+  const yEnd = Math.max(yTo, yTop), len = yFrom - yEnd;
+  ctx.strokeStyle = colour; ctx.fillStyle = colour; ctx.lineCap = 'butt'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x - w * 2, yFrom); ctx.lineTo(x + w * 2, yFrom); ctx.stroke();
+  if (len < 2) return;
+  const head = Math.min(w * 3, len);
+  ctx.lineWidth = w;
+  if (len > head) { ctx.beginPath(); ctx.moveTo(x, yFrom); ctx.lineTo(x, yEnd + head * 0.9); ctx.stroke(); }
+  ctx.beginPath();
+  ctx.moveTo(x, yEnd); ctx.lineTo(x - head * 0.8, yEnd + head); ctx.lineTo(x + head * 0.8, yEnd + head);
+  ctx.closePath(); ctx.fill();
+}
+function drawAtom(x, y, r, el, font){
+  const st = ATOM_STYLE[el];
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = st.fill; ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = st.stroke; ctx.stroke();
+  ctx.fillStyle = st.text; ctx.font = font('700');
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(el, x, y + 1);
+}
+
+function frame(now){
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  step(dt); draw();
+  requestAnimationFrame(frame);
+}
+refresh();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
