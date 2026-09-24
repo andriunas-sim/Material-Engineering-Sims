@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D model viewer</title>
+<style>
+:root{
+  --paper:#eef3f6; --card:#ffffff; --ink:#14213d; --muted:#56637a; --line:#c9d5de; --focus:#1d5fd1;
+  font-size:clamp(13px, 0.5vw + 8px, 20px);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  color:var(--ink);background:var(--paper);display:flex;flex-direction:column;
+  font-family:Bahnschrift,"DIN Alternate","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+}
+model-viewer{flex:1;width:100%;min-height:0;background:var(--card);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;padding:.5rem .7rem}
+.bar .hint{font-size:.8rem;color:var(--muted);margin-right:auto}
+button{
+  font:inherit;font-size:.82rem;cursor:pointer;color:var(--ink);
+  background:var(--card);border:1px solid var(--line);border-radius:999px;padding:.25rem .75rem;
+}
+button:hover{border-color:var(--ink)}
+button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+#fallback{display:none;padding:1rem;font-size:.9rem;color:var(--muted)}
+</style>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@4.0.0/dist/model-viewer.min.js"></script>
+</head>
+<body>
+
+<model-viewer id="mv"
+  src="Miller_Index_Example_R1.glb"
+  alt="3D model"
+  camera-controls touch-action="pan-y"
+  interaction-prompt="none"
+  shadow-intensity="0.6"
+  exposure="1.0"
+  environment-image="neutral">
+</model-viewer>
+
+<div class="bar">
+  <span class="hint">Drag to rotate · scroll or pinch to zoom · right-drag or two fingers to pan</span>
+  <button data-orbit="0deg 75deg auto">Front</button>
+  <button data-orbit="90deg 75deg auto">Side</button>
+  <button data-orbit="0deg 0deg auto">Top</button>
+  <button data-orbit="45deg 54.7deg auto">Corner</button>
+  <button id="spin">Auto-rotate</button>
+  <button id="reset">Reset</button>
+</div>
+
+<p id="fallback">The 3D viewer could not load. It needs an internet connection the first time it runs.</p>
+
+<script>
+  const mv = document.getElementById('mv');
+  // ?src=other-model.glb lets one page serve several models
+  const src = new URLSearchParams(location.search).get('src');
+  if (src && /^[\w.\-]+\.glb$/i.test(src)) mv.src = src;
+
+  document.querySelectorAll('[data-orbit]').forEach(b => {
+    b.addEventListener('click', () => {
+      mv.cameraOrbit = b.dataset.orbit;
+      mv.autoRotate = false;
+    });
+  });
+  document.getElementById('spin').addEventListener('click', () => { mv.autoRotate = !mv.autoRotate; });
+  document.getElementById('reset').addEventListener('click', () => {
+    mv.autoRotate = false;
+    mv.cameraOrbit = '0deg 75deg auto';
+    mv.resetTurntableRotation();
+    mv.jumpCameraToGoal();
+  });
+
+  setTimeout(() => {
+    if (!customElements.get('model-viewer')) document.getElementById('fallback').style.display = 'block';
+  }, 4000);
+</script>
+</body>
+</html>
