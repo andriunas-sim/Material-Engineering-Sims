@@ -299,8 +299,7 @@ function drawBar(u,st,p){
 }
 
 // ---------- state & loop ----------
-let u=0,playing=!matchMedia("(prefers-reduced-motion: reduce)").matches,dirty=true,last=0,probe=0.30,ub=breakU(probe),lastPhase=-1;
-if(!playing)u=0.5;
+let u=0,playing=false,dirty=true,last=0,probe=0.30,ub=breakU(probe),lastPhase=-1;
 const DUR=36000,tl=$("timeline"),playBtn=$("play"),chips=[...document.querySelectorAll(".chip")];
 function setPlay(v){playing=v;playBtn.textContent=v?"Pause":"Play";last=0}
 function render(){
