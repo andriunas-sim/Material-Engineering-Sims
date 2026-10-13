@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Age Hardening / Precipitation Hardening — Animation (Quad Growth)</title>
+<style>
+  :root{--bg:#0b0f14;--panel:#111821;--ink:#e6edf3;--muted:#8aa1b1}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Cantarell,"Noto Sans",sans-serif}
+  .wrap{max-width:1100px;margin:22px auto;padding:0 16px}
+  h1{font-size:1.5rem;margin:0 0 8px}
+  .board{display:grid;grid-template-columns:1fr 320px;gap:16px}
+  .card{background:var(--panel);border:1px solid #1c2733;border-radius:14px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+  .card h2{font-size:1.05rem;margin:0;padding:10px 12px;border-bottom:1px solid #1c2733;background:linear-gradient(0deg,#0f1520,#0c131c)}
+  .pad{padding:12px}
+  canvas{display:block;width:100%;height:100%;background:#0f141b}
+  .row{display:flex;align-items:center;gap:10px;margin:10px 0}
+  .row label{width:150px;color:var(--muted);font-size:.9rem}
+  input[type=range]{width:100%}
+  .btn{appearance:none;border:1px solid #233246;background:#1a2532;color:var(--ink);padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:600}
+  .btn.alt{background:#222;border-color:#333}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+  .chip{background:#131b25;border:1px solid #1c2733;padding:6px 8px;border-radius:999px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Age Hardening (Precipitation Hardening) — Interactive Animation (Quad Growth)</h1>
+  <p style="color:var(--muted);margin:.25rem 0 1rem">This version makes each captured solute atom increase precipitate size by ~4× compared with the original.</p>
+
+  <div class="board">
+    <div class="card" style="grid-row: span 2;">
+      <h2>Microstructure</h2>
+      <div class="pad">
+        <canvas id="micro" width="720" height="480" aria-label="Microstructure"></canvas>
+        <div class="legend" style="margin-top:10px">
+          <span class="chip">Solute: blue dots</span>
+          <span class="chip">Precipitates: yellow → orange → red as they grow</span>
+        </div>
+        <div id="stats" style="margin-top:8px;color:#9fb2c2;font-variant-numeric:tabular-nums"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Controls</h2>
+      <div class="pad">
+        <div class="row"><label for="temp">Ageing Temp</label><input id="temp" type="range" min="0" max="100" value="55"><span id="tempV">55</span></div>
+        <div class="row"><label for="nucl">Nucleation rate</label><input id="nucl" type="range" min="0" max="100" value="35"><span id="nuclV">35</span></div>
+        <div class="row"><label for="diff">Diffusivity</label><input id="diff" type="range" min="0" max="100" value="60"><span id="diffV">60</span></div>
+        <div class="row"><label for="dens">Initial solute density</label><input id="dens" type="range" min="100" max="2000" value="900"><span id="densV">900</span></div>
+        <div class="row"><button id="start" class="btn">▶ Start</button><button id="reset" class="btn alt">↺ Reset</button></div>
+        <div style="color:#9fb2c2;font-size:.85rem">Stage: <span id="stage">Quenched (t = 0)</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Hardness vs Time (qualitative)</h2>
+      <div class="pad"><canvas id="chart" width="720" height="180"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const micro = document.getElementById('micro');
+  const m = micro.getContext('2d');
+  const chart = document.getElementById('chart');
+  const g = chart.getContext('2d');
+  const $ = id => document.getElementById(id);
+
+  const temp=$('temp'), nucl=$('nucl'), diff=$('diff'), dens=$('dens');
+  const tempV=$('tempV'), nuclV=$('nuclV'), diffV=$('diffV'), densV=$('densV');
+  [temp,nucl,diff,dens].forEach(inp=>inp.addEventListener('input',()=>{tempV.textContent=temp.value;nuclV.textContent=nucl.value;diffV.textContent=diff.value;densV.textContent=dens.value;}));
+
+  const stage=$('stage'), stats=$('stats');
+
+  let solute=[], prec=[], t=0, running=false, Htrace=[];
+  const W=micro.width, H=micro.height;
+
+  const rnd=(a,b)=>a+Math.random()*(b-a); const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+
+  function init(){
+    t=0; running=false; Htrace=[]; solute=[]; prec=[];
+    const N=parseInt(dens.value,10);
+    for(let i=0;i<N;i++) solute.push({x:rnd(6,W-6),y:rnd(6,H-6),vx:rnd(-.6,.6),vy:rnd(-.6,.6)});
+    $('start').textContent='▶ Start'; stage.textContent='Quenched (t = 0)';
+    draw(); drawChart(); updateStats();
+  }
+
+  function pNucl(){
+    const base=(nucl.value/100)*0.02;
+    const sat=clamp(solute.length/(parseInt(dens.value,10)+1),0,1);
+    const early=Math.exp(-t/8000);
+    return base*(0.5+0.5*sat)*(0.6+0.4*early)*(0.5+(temp.value/100)*1.5);
+  }
+
+  function step(dt){
+    t+=dt;
+    stage.textContent= t<6000? 'Nucleation and early growth' : t<22000? 'Growth (hardening)' : 'Coarsening / over-ageing';
+    const D=0.3+(diff.value/100)*1.4; const Tfac=0.5+(temp.value/100)*1.5;
+
+    // random walk
+    for(const s of solute){ s.vx+=rnd(-0.05,0.05)*D; s.vy+=rnd(-0.05,0.05)*D; s.x+=s.vx; s.y+=s.vy; if(s.x<3||s.x>W-3) s.vx*=-1; if(s.y<3||s.y>H-3) s.vy*=-1; s.x=clamp(s.x,3,W-3); s.y=clamp(s.y,3,H-3); }
+
+    // nucleation
+    if(Math.random()<pNucl() && solute.length){ const idx=(Math.random()*solute.length)|0; const s=solute.splice(idx,1)[0]; prec.push({x:s.x,y:s.y,r:2,age:0}); }
+
+    // growth by capture (QUADRUPLED MASS INCREMENT)
+    const capture=10; const remove=new Set();
+    for(const p of prec){ p.age+=dt; const capR=p.r+capture; for(let j=0;j<solute.length;j++){ if(remove.has(j)) continue; const s=solute[j]; const dx=s.x-p.x, dy=s.y-p.y; if(dx*dx+dy*dy<capR*capR){ const area=Math.PI*p.r*p.r + 6.8; p.r=Math.sqrt(area/Math.PI); remove.add(j);} } }
+    if(remove.size) solute=solute.filter((_,i)=>!remove.has(i));
+
+    // coarsening
+    if(prec.length){ let mean=prec.reduce((a,p)=>a+p.r,0)/prec.length; const k=0.00003*Tfac; for(const p of prec){ if(prec.length<2) break; p.r += (p.r<mean?-1:+1)*k*dt; p.r=Math.max(1.4,p.r);} }
+
+    // merge overlaps
+    for(let i=0;i<prec.length;i++) for(let j=i+1;j<prec.length;j++){ const a=prec[i], b=prec[j]; const d=Math.hypot(a.x-b.x,a.y-b.y); if(d<Math.min(a.r,b.r)*0.7){ const A=Math.PI*a.r*a.r + Math.PI*b.r*b.r; prec[i]={x:(a.x+b.x)/2,y:(a.y+b.y)/2,r:Math.sqrt(A/Math.PI),age:Math.max(a.age,b.age)}; prec.splice(j,1); j--; } }
+
+    // hardness (qualitative)
+    const Np=prec.length; const rAvg=prec.reduce((a,p)=>a+p.r,0)/(Np||1); const nd=Np/600; const rOpt=6.5; const peak=Math.exp(-Math.pow((rAvg/rOpt-1),2)*2.5); const Hq=20+400*nd*peak; Htrace.push({t,H:Hq});
+
+    updateStats(Np,rAvg);
+  }
+
+  function color(r){ return r<4? '#ffd166' : r<8? '#fca311' : '#ff4d6d'; }
+
+  function draw(){
+    m.clearRect(0,0,W,H); let grad=m.createLinearGradient(0,0,W,H); grad.addColorStop(0,'#0e141b'); grad.addColorStop(1,'#0c1218'); m.fillStyle=grad; m.fillRect(0,0,W,H);
+    m.fillStyle='#59a5ff'; for(const s of solute){ m.beginPath(); m.arc(s.x,s.y,1.5,0,Math.PI*2); m.fill(); }
+    for(const p of prec){ m.fillStyle=color(p.r); m.beginPath(); m.arc(p.x,p.y,p.r,0,Math.PI*2); m.fill(); m.strokeStyle='rgba(0,0,0,.35)'; m.lineWidth=1; m.stroke(); }
+    m.fillStyle='rgba(255,255,255,.08)'; m.fillRect(0,0,W,22); m.fillStyle='#9fb2c2'; m.font='12px ui-monospace,monospace'; m.fillText(`t=${(t/1000).toFixed(1)} s | solute: ${solute.length} | precipitates: ${prec.length}`,8,15);
+  }
+
+  function drawChart(){
+    g.clearRect(0,0,chart.width,chart.height); g.strokeStyle='#203145'; g.lineWidth=1; g.strokeRect(40,10,chart.width-60,chart.height-30); g.fillStyle='#8aa1b1'; g.font='12px system-ui,sans-serif'; g.fillText('Hardness (qual.)',8,14); g.fillText('time →',chart.width-60,chart.height-8);
+    if(Htrace.length<2) return; const t0=Htrace[0].t, t1=Htrace[Htrace.length-1].t; const Hs=Htrace.map(o=>o.H); const Hmin=Math.min(...Hs), Hmax=Math.max(...Hs);
+    g.beginPath(); for(let i=0;i<Htrace.length;i++){ const x=40+(Htrace[i].t-t0)/Math.max(1,(t1-t0))*(chart.width-60); const y=10+(1-(Htrace[i].H-Hmin)/Math.max(1,(Hmax-Hmin)))*(chart.height-30); if(i===0) g.moveTo(x,y); else g.lineTo(x,y);} g.strokeStyle='#53b3ff'; g.lineWidth=2; g.stroke();
+  }
+
+  function updateStats(Np=prec.length,rAvg=prec.reduce((a,p)=>a+p.r,0)/(prec.length||1)){
+    const Hq=Htrace.length?Htrace[Htrace.length-1].H:0; stats.innerHTML=`<span class="chip">Solute: <strong>${solute.length}</strong></span> <span class="chip">Precipitates: <strong>${Np}</strong></span> <span class="chip">Avg r: <strong>${rAvg.toFixed(2)}</strong> px</span> <span class="chip">Hardness: <strong>${Hq.toFixed(0)}</strong></span>`;
+  }
+
+  let last=0; function loop(ts){ if(!running){ last=ts; draw(); drawChart(); return; } const dt=Math.min(32, ts-last||16); last=ts; step(dt); draw(); drawChart(); requestAnimationFrame(loop);} 
+
+  $('start').addEventListener('click',()=>{ running=!running; $('start').textContent=running?'⏸ Pause':'▶ Start'; if(running) requestAnimationFrame(loop); });
+  $('reset').addEventListener('click',()=>{ init(); });
+
+  init(); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
