@@ -108,26 +108,6 @@
     </div>
   </div>
 
-  <details class="card">
-    <summary class="pad">How the model works</summary>
-    <div class="pad" style="padding-top:0">
-      <p><b>Lattice.</b> 120 × 80 square lattice with periodic boundaries. Site occupancy is matrix, solute or vacancy. Lattice sites never move, only their occupants change. This is the substitutional picture: Cu replaces Al on the FCC lattice.</p>
-      <p><b>Energetics.</b> Each solute–solute nearest-neighbour bond lowers the energy by ε. All other pairs contribute nothing. This is the lattice-gas (Ising) model of a system with a miscibility gap.</p>
-      <p><b>Kinetics (vacancy mechanism).</b> A random vacancy tries to swap with a random neighbour. Swapping with a matrix atom is always accepted. Swapping with a solute atom is accepted with the Metropolis probability:</p>
-      <p class="eq">P = min[1, exp(−ΔE / kT)],&nbsp;&nbsp; ΔE = ε (bonds broken − bonds made)</p>
-      <p>So a solute atom readily joins a cluster but rarely leaves one at low temperature. Real time accumulates as Δt ∝ 1 / (N<sub>v</sub> Γ), with jump rate Γ ∝ exp(−E<sub>m</sub>/kT) and E<sub>m</sub> = 2ε. Lower temperature therefore means a slower clock, and more vacancies mean a faster one.</p>
-      <p><b>Solvus.</b> The equilibrium solubility comes from Onsager's exact 2D Ising result:</p>
-      <p class="eq">c<sub>eq</sub> = ½ [1 − (1 − sinh<sup>−4</sup>(ε / 2kT))<sup>1/8</sup>]</p>
-      <p>Above the solvus for the chosen composition, clusters dissolve. That is solution treatment.</p>
-      <p><b>Hardness.</b> A precipitate is any connected solute cluster of 4 or more atoms. Let f be the fraction of sites in precipitates, r̄ the atom-weighted mean radius (in lattice spacings), and c<sub>ss</sub> the solute still in solution. Three contributions are combined:</p>
-      <p class="eq">Δτ<sub>shear</sub> ∝ √(f r̄),&nbsp;&nbsp; Δτ<sub>Orowan</sub> ∝ √f / r̄,&nbsp;&nbsp; Δτ<sub>ss</sub> ∝ c<sub>ss</sub><sup>2/3</sup></p>
-      <p class="eq">Δτ<sub>ppt</sub> = (Δτ<sub>shear</sub><sup>−4</sup> + Δτ<sub>Orowan</sub><sup>−4</sup>)<sup>−1/4</sup></p>
-      <p>Whichever mechanism is weaker (easier for the dislocation) controls. The crossover radius r<sub>c</sub> = 2.8 lattice spacings (about 25 atoms) sets the peak. Clusters below r<sub>c</sub> are drawn yellow (sheared) and those above are drawn red (looped).</p>
-      <p><b>Limitations.</b> The model is 2D and isotropic, so GP zones appear as compact blobs rather than {100} discs. Every cluster sits on matrix sites, so it is always coherent. The GP → θ″ → θ′ → θ sequence and loss of coherency are not modelled, and the shear-to-Orowan transition is set by size alone. Vacancy numbers stay constant: there is no annihilation at sinks and no solute–vacancy binding.</p>
-    </div>
-  </details>
-</div>
-
 <script>
 (() => {
   const $ = id => document.getElementById(id);
