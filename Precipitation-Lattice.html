@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Precipitation Hardening — Lattice Model</title>
+<style>
+  :root{--bg:#0b0f14;--panel:#111821;--ink:#e6edf3;--muted:#8aa1b1;--line:#1c2733;
+    --matrix:#3d4a57;--solute:#59a5ff;--small:#ffd166;--large:#ff4d6d;--vac:#e6edf3}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Cantarell,"Noto Sans",sans-serif}
+  .wrap{max-width:1180px;margin:20px auto;padding:0 16px}
+  h1{font-size:1.45rem;margin:0 0 6px}
+  .sub{color:var(--muted);margin:0 0 14px;font-size:.95rem;line-height:1.45}
+  .board{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px}
+  .full{grid-column:1 / -1}
+  @media (max-width:900px){.board{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+  .card h2{font-size:1rem;margin:0;padding:10px 12px;border-bottom:1px solid var(--line);background:linear-gradient(0deg,#0f1520,#0c131c)}
+  .pad{padding:12px}
+  canvas{display:block;width:100%;background:#0f141b;border-radius:6px}
+  #micro{aspect-ratio:3/2}
+  #chart{aspect-ratio:4/1;min-height:200px}
+  .ctl{margin:12px 0}
+  .ctl .top{display:flex;justify-content:space-between;align-items:baseline;font-size:.9rem}
+  .ctl .top span:first-child{color:var(--muted)}
+  .ctl .top b{font-variant-numeric:tabular-nums}
+  .ctl .hint{font-size:.78rem;color:#6f8696;margin-top:3px;line-height:1.35}
+  input[type=range]{width:100%;margin:6px 0 0}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .btn{appearance:none;border:1px solid #233246;background:#1a2532;color:var(--ink);padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:600;font-size:.9rem}
+  .btn:hover{background:#213044}
+  .btn.alt{background:#1a1f26;border-color:#2c3540}
+  .stage{margin-top:14px;padding:10px;border-radius:10px;background:#0d141c;border:1px solid var(--line);font-size:.9rem}
+  .stage b{display:block;font-size:1rem;margin-top:2px}
+  .legend{display:flex;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin-top:10px}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:#131b25;border:1px solid var(--line);padding:5px 9px;border-radius:999px}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:10px}
+  .stat{background:#0d141c;border:1px solid var(--line);border-radius:10px;padding:7px 9px}
+  .stat span{display:block;font-size:.72rem;color:var(--muted)}
+  .stat b{font-size:1.05rem;font-variant-numeric:tabular-nums}
+  details{margin-top:16px;color:#c3d1dc;font-size:.92rem;line-height:1.55}
+  details summary{cursor:pointer;color:var(--ink);font-weight:600}
+  details .pad p{margin:.5em 0}
+  .eq{font-family:"Cambria Math","STIX Two Math",Cambria,Georgia,serif;font-size:1.02rem;color:var(--ink);padding:2px 0 2px 14px}
+  label.check{display:flex;gap:8px;align-items:center;font-size:.85rem;color:var(--muted);margin-top:12px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Precipitation Hardening — Lattice Model</h1>
+  <p class="sub">A substitutional alloy (think Al–Cu) on a fixed crystal lattice. Every site holds a matrix atom, a solute atom, or a vacancy. Atoms only move by swapping with a neighbouring vacancy. Solute–solute bonds lower the energy, so after quenching the solute clusters, the clusters grow, and the large ones eat the small ones. Hardness is calculated from the resulting microstructure.</p>
+
+  <div class="board">
+    <div class="card">
+      <h2>Microstructure (120 × 80 lattice sites)</h2>
+      <div class="pad">
+        <canvas id="micro" aria-label="Lattice microstructure"></canvas>
+        <div class="legend">
+          <span class="chip"><i class="dot" style="background:var(--matrix)"></i>Matrix atom (Al)</span>
+          <span class="chip"><i class="dot" style="background:var(--solute)"></i>Solute in solid solution (Cu)</span>
+          <span class="chip"><i class="dot" style="background:var(--small)"></i>Small precipitate: sheared by dislocations</span>
+          <span class="chip"><i class="dot" style="background:var(--large)"></i>Large precipitate: bypassed (Orowan)</span>
+          <span class="chip"><i class="dot" style="background:transparent;border:1.5px solid var(--vac)"></i>Vacancy</span>
+        </div>
+        <div class="stats" id="stats"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Heat treatment</h2>
+      <div class="pad">
+        <div class="ctl">
+          <div class="top"><span>Ageing temperature, kT/ε</span><b id="tempV"></b></div>
+          <input id="temp" type="range" min="0.22" max="0.62" step="0.01" value="0.36">
+          <div class="hint" id="tempHint"></div>
+        </div>
+        <div class="ctl">
+          <div class="top"><span>Solute content</span><b id="concV"></b></div>
+          <input id="conc" type="range" min="2" max="10" step="0.5" value="5">
+          <div class="hint">Takes effect at the next solution treatment and quench.</div>
+        </div>
+        <div class="ctl">
+          <div class="top"><span>Quenched-in vacancies</span><b id="vacV"></b></div>
+          <input id="vac" type="range" min="1" max="60" step="1" value="16">
+          <div class="hint">No vacancies, no diffusion. More vacancies means faster ageing in real time.</div>
+        </div>
+        <div class="ctl">
+          <div class="top"><span>Animation speed</span><b id="spdV"></b></div>
+          <input id="spd" type="range" min="1" max="10" step="1" value="5">
+        </div>
+        <label class="check"><input type="checkbox" id="showMatrix" checked> Show matrix atoms</label>
+        <div class="btns">
+          <button id="start" class="btn">▶ Age</button>
+          <button id="quench" class="btn alt">Solution treat &amp; quench</button>
+          <button id="clear" class="btn alt">Clear old curves</button>
+        </div>
+        <div class="stage">Stage<b id="stage">As-quenched: supersaturated solid solution</b></div>
+      </div>
+    </div>
+
+    <div class="card full">
+      <h2>Ageing curve: hardness vs log(ageing time)</h2>
+      <div class="pad"><canvas id="chart" aria-label="Hardness versus ageing time"></canvas>
+        <div class="hint" style="font-size:.78rem;color:#6f8696;margin-top:6px">Each new quench keeps the previous curve (faded), so you can compare ageing temperatures, compositions or vacancy contents. Hardness is indicative only, scaled to an Al–4Cu-type range.</div>
+      </div>
+    </div>
+  </div>
+
+  <details class="card">
+    <summary class="pad">How the model works</summary>
+    <div class="pad" style="padding-top:0">
+      <p><b>Lattice.</b> 120 × 80 square lattice with periodic boundaries. Site occupancy is matrix, solute or vacancy. Lattice sites never move, only their occupants change. This is the substitutional picture: Cu replaces Al on the FCC lattice.</p>
+      <p><b>Energetics.</b> Each solute–solute nearest-neighbour bond lowers the energy by ε. All other pairs contribute nothing. This is the lattice-gas (Ising) model of a system with a miscibility gap.</p>
+      <p><b>Kinetics (vacancy mechanism).</b> A random vacancy tries to swap with a random neighbour. Swapping with a matrix atom is always accepted. Swapping with a solute atom is accepted with the Metropolis probability:</p>
+      <p class="eq">P = min[1, exp(−ΔE / kT)],&nbsp;&nbsp; ΔE = ε (bonds broken − bonds made)</p>
+      <p>So a solute atom readily joins a cluster but rarely leaves one at low temperature. Real time accumulates as Δt ∝ 1 / (N<sub>v</sub> Γ), with jump rate Γ ∝ exp(−E<sub>m</sub>/kT) and E<sub>m</sub> = 2ε. Lower temperature therefore means a slower clock, and more vacancies mean a faster one.</p>
+      <p><b>Solvus.</b> The equilibrium solubility comes from Onsager's exact 2D Ising result:</p>
+      <p class="eq">c<sub>eq</sub> = ½ [1 − (1 − sinh<sup>−4</sup>(ε / 2kT))<sup>1/8</sup>]</p>
+      <p>Above the solvus for the chosen composition, clusters dissolve. That is solution treatment.</p>
+      <p><b>Hardness.</b> A precipitate is any connected solute cluster of 4 or more atoms. Let f be the fraction of sites in precipitates, r̄ the atom-weighted mean radius (in lattice spacings), and c<sub>ss</sub> the solute still in solution. Three contributions are combined:</p>
+      <p class="eq">Δτ<sub>shear</sub> ∝ √(f r̄),&nbsp;&nbsp; Δτ<sub>Orowan</sub> ∝ √f / r̄,&nbsp;&nbsp; Δτ<sub>ss</sub> ∝ c<sub>ss</sub><sup>2/3</sup></p>
+      <p class="eq">Δτ<sub>ppt</sub> = (Δτ<sub>shear</sub><sup>−4</sup> + Δτ<sub>Orowan</sub><sup>−4</sup>)<sup>−1/4</sup></p>
+      <p>Whichever mechanism is weaker (easier for the dislocation) controls. The crossover radius r<sub>c</sub> = 2.8 lattice spacings (about 25 atoms) sets the peak. Clusters below r<sub>c</sub> are drawn yellow (sheared) and those above are drawn red (looped).</p>
+      <p><b>Limitations.</b> The model is 2D and isotropic, so GP zones appear as compact blobs rather than {100} discs. Every cluster sits on matrix sites, so it is always coherent. The GP → θ″ → θ′ → θ sequence and loss of coherency are not modelled, and the shear-to-Orowan transition is set by size alone. Vacancy numbers stay constant: there is no annihilation at sinks and no solute–vacancy binding.</p>
+    </div>
+  </details>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  // ---------- lattice ----------
+  const NX = 120, NY = 80, N = NX * NY, CELL = 6, W = NX * CELL, H = NY * CELL;
+  const MATRIX = 0, SOLUTE = 1, VAC = 2;
+  const NMIN = 4, RC = 2.8, H0 = 45, KSS = 110, A = 230, B = A * Math.pow(RC, 1.5);
+  const EM = 2, KTREF = 0.35;
+
+  const nbr = new Int32Array(N * 4);
+  for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) {
+    const i = y * NX + x;
+    nbr[4*i]   = y * NX + (x + 1) % NX;
+    nbr[4*i+1] = y * NX + (x - 1 + NX) % NX;
+    nbr[4*i+2] = ((y + 1) % NY) * NX + x;
+    nbr[4*i+3] = ((y - 1 + NY) % NY) * NX + x;
+  }
+  const occ = new Uint8Array(N), label = new Int32Array(N), stack = new Int32Array(N);
+  let clusterSize = [];
+  let vacs = [], nSol = 0, cNom = 0.05;
+
+  // ---------- thermodynamics ----------
+  const KTC = 1 / (2 * Math.asinh(1));
+  function ceq(kT){
+    if (kT >= KTC) return 0.5;
+    const s = Math.sinh(1 / (2 * kT));
+    return 0.5 * (1 - Math.pow(1 - Math.pow(s, -4), 0.125));
+  }
+  function solvusKT(c){
+    const m = 1 - 2 * c;
+    return 1 / (2 * Math.asinh(Math.pow(1 - Math.pow(m, 8), -0.25)));
+  }
+
+  // ---------- controls ----------
+  const temp = $('temp'), conc = $('conc'), vac = $('vac'), spd = $('spd');
+  function kT(){ return parseFloat(temp.value); }
+  function refreshLabels(){
+    $('tempV').textContent = kT().toFixed(2);
+    $('concV').textContent = parseFloat(conc.value).toFixed(1) + ' at.%';
+    $('vacV').textContent = vac.value + '  (' + (vac.value / N * 100).toFixed(2) + ' %)';
+    $('spdV').textContent = spd.value;
+    const ts = solvusKT(cNom), ce = ceq(kT());
+    $('tempHint').innerHTML = `Solvus for this alloy: kT/ε = ${ts.toFixed(3)}. ` +
+      (kT() >= ts ? '<b style="color:#ff9f6b">Above solvus: solute dissolves.</b>' :
+       `Equilibrium solubility ${(ce*100).toFixed(2)} at.%, supersaturation ×${(cNom/ce).toFixed(0)}.`);
+  }
+
+  // ---------- state ----------
+  let t = 0, running = false, Hs = null, trace = [], history = [], Hmax = 0, tAtMax = 0, tempChanged = false;
+  let lastStats = {nP:0, rw:0, f:0, css:0, H:0};
+  const HIST_COLS = ['#8fd18f', '#c8a2ff', '#ffb36b', '#6bd6e0', '#f08fb8'];
+
+  function shuffle(a){ for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; const tmp = a[i]; a[i] = a[j]; a[j] = tmp; } return a; }
+
+  function quench(){
+    if (trace.length > 5) {
+      history.push({pts: trace, label: `kT=${trace.kT0.toFixed(2)}${tempChanged ? '*' : ''}, ${(cNom*100).toFixed(1)}%, ${trace.nv0} vac`});
+      if (history.length > 5) history.shift();
+    }
+    cNom = parseFloat(conc.value) / 100;
+    occ.fill(MATRIX);
+    const idx = shuffle(Array.from({length: N}, (_, i) => i));
+    nSol = Math.round(cNom * N);
+    for (let k = 0; k < nSol; k++) occ[idx[k]] = SOLUTE;
+    vacs = [];
+    const nv = parseInt(vac.value, 10);
+    for (let k = nSol; k < nSol + nv; k++) { occ[idx[k]] = VAC; vacs.push(idx[k]); }
+    t = 0; Hs = null; trace = []; trace.kT0 = kT(); trace.nv0 = nv; Hmax = 0; tAtMax = 0; tempChanged = false;
+    analyse(); refreshLabels(); draw(); drawChart(); updateStats();
+  }
+
+  function setVacancies(n){
+    while (vacs.length < n) {
+      const i = (Math.random() * N) | 0;
+      if (occ[i] === MATRIX) { occ[i] = VAC; vacs.push(i); }
+    }
+    while (vacs.length > n) { const i = vacs.pop(); occ[i] = MATRIX; }
+  }
+
+  // ---------- kinetics ----------
+  function jumps(K){
+    const nv = vacs.length; if (!nv) return;
+    const T = kT(), beta = 1 / T;
+    const acc = [1, Math.exp(-beta), Math.exp(-2*beta), Math.exp(-3*beta)];
+    for (let a = 0; a < K; a++) {
+      const vi = (Math.random() * nv) | 0, v = vacs[vi];
+      const n = nbr[4*v + ((Math.random() * 4) | 0)], s = occ[n];
+      if (s === VAC) continue;
+      if (s === SOLUTE) {
+        let before = 0, after = 0;
+        for (let k = 0; k < 4; k++) {
+          if (occ[nbr[4*n+k]] === SOLUTE) before++;
+          const j = nbr[4*v+k]; if (j !== n && occ[j] === SOLUTE) after++;
+        }
+        const dE = before - after;
+        if (dE > 0 && Math.random() >= acc[dE]) continue;
+      }
+      occ[v] = s; occ[n] = VAC; vacs[vi] = n;
+    }
+    const G = Math.exp(-EM / T + EM / KTREF);
+    t += K / (nv * G * N);
+  }
+
+  // ---------- microstructure analysis ----------
+  function analyse(){
+    label.fill(-1); clusterSize = [];
+    let nP = 0, sumN = 0, sumNR = 0;
+    for (let i = 0; i < N; i++) {
+      if (occ[i] !== SOLUTE || label[i] >= 0) continue;
+      const id = clusterSize.length; let sp = 0, sz = 0;
+      stack[sp++] = i; label[i] = id;
+      while (sp) {
+        const p = stack[--sp]; sz++;
+        for (let k = 0; k < 4; k++) { const q = nbr[4*p+k]; if (occ[q] === SOLUTE && label[q] < 0) { label[q] = id; stack[sp++] = q; } }
+      }
+      clusterSize.push(sz);
+      if (sz >= NMIN) { nP++; sumN += sz; sumNR += sz * Math.sqrt(sz / Math.PI); }
+    }
+    const f = sumN / N, css = (nSol - sumN) / N, rw = sumN ? sumNR / sumN : 0;
+    let dp = 0;
+    if (f > 0) { const ts = A * Math.sqrt(f * rw), to = B * Math.sqrt(f) / rw; dp = Math.pow(Math.pow(ts, -4) + Math.pow(to, -4), -0.25); }
+    const Hn = H0 + KSS * Math.pow(Math.max(css, 0), 2/3) + dp;
+    Hs = Hs === null ? Hn : Hs + 0.12 * (Hn - Hs);
+    lastStats = {nP, rw, f, css, H: Hs};
+  }
+
+  function classOf(i){
+    const sz = clusterSize[label[i]];
+    if (sz < NMIN) return 0;
+    return Math.sqrt(sz / Math.PI) < RC ? 1 : 2;
+  }
+
+  // ---------- drawing ----------
+  const micro = $('micro'), m = micro.getContext('2d');
+  const chart = $('chart'), g = chart.getContext('2d');
+  let dpr = 1, bgOn = null, bgOff = null;
+
+  function buildBackgrounds(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    micro.width = W * dpr; micro.height = H * dpr;
+    const mk = (withAtoms) => {
+      const c = document.createElement('canvas'); c.width = W * dpr; c.height = H * dpr;
+      const x = c.getContext('2d'); x.scale(dpr, dpr);
+      x.fillStyle = '#0f141b'; x.fillRect(0, 0, W, H);
+      if (withAtoms) {
+        x.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--matrix').trim();
+        const p = new Path2D();
+        for (let yy = 0; yy < NY; yy++) for (let xx = 0; xx < NX; xx++) {
+          const cx = (xx + .5) * CELL, cy = (yy + .5) * CELL;
+          p.moveTo(cx + 2.5, cy); p.arc(cx, cy, 2.5, 0, Math.PI * 2);
+        }
+        x.fill(p);
+      } else {
+        x.fillStyle = '#1a232d';
+        for (let yy = 0; yy < NY; yy++) for (let xx = 0; xx < NX; xx++) x.fillRect((xx + .5) * CELL - .5, (yy + .5) * CELL - .5, 1, 1);
+      }
+      return c;
+    };
+    bgOn = mk(true); bgOff = mk(false);
+  }
+
+  const COLS = ['#59a5ff', '#ffd166', '#ff4d6d'];
+  function draw(){
+    m.setTransform(1, 0, 0, 1, 0, 0);
+    m.drawImage($('showMatrix').checked ? bgOn : bgOff, 0, 0);
+    m.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const paths = [new Path2D(), new Path2D(), new Path2D()];
+    for (let i = 0; i < N; i++) {
+      if (occ[i] !== SOLUTE) continue;
+      const cx = (i % NX + .5) * CELL, cy = ((i / NX | 0) + .5) * CELL;
+      const p = paths[classOf(i)]; p.moveTo(cx + 2.7, cy); p.arc(cx, cy, 2.7, 0, Math.PI * 2);
+    }
+    for (let k = 0; k < 3; k++) { m.fillStyle = COLS[k]; m.fill(paths[k]); }
+    m.strokeStyle = '#e6edf3'; m.lineWidth = 1;
+    for (const v of vacs) {
+      const cx = (v % NX + .5) * CELL, cy = ((v / NX | 0) + .5) * CELL;
+      m.fillStyle = '#0f141b'; m.fillRect(cx - 3, cy - 3, 6, 6);
+      m.beginPath(); m.arc(cx, cy, 2.2, 0, Math.PI * 2); m.stroke();
+    }
+  }
+
+  function sizeChart(){
+    const r = chart.getBoundingClientRect();
+    chart.width = Math.max(300, r.width) * dpr; chart.height = Math.max(200, r.height) * dpr;
+  }
+
+  function drawChart(){
+    const cw = chart.width / dpr, ch = chart.height / dpr;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, cw, ch);
+    const L = 52, R = 16, T = 14, Bm = 34, pw = cw - L - R, ph = ch - T - Bm;
+    const all = history.map(h => h.pts).concat([trace]);
+    let lo = Infinity, hi = -Infinity, ymin = 50, ymax = 130;
+    for (const tr of all) for (const p of tr) { const l = Math.log10(p.t); if (l < lo) lo = l; if (l > hi) hi = l; if (p.H < ymin) ymin = p.H; if (p.H > ymax) ymax = p.H; }
+    if (!isFinite(lo)) { lo = -1; hi = 2; }
+    lo = Math.floor(lo); hi = Math.max(Math.ceil(hi), lo + 2);
+    ymin = Math.floor(ymin / 10) * 10; ymax = Math.ceil(ymax / 10) * 10;
+    const X = l => L + (l - lo) / (hi - lo) * pw, Y = h => T + (1 - (h - ymin) / (ymax - ymin)) * ph;
+
+    g.font = '11px system-ui,sans-serif'; g.lineWidth = 1;
+    g.strokeStyle = '#1b2632'; g.fillStyle = '#8aa1b1';
+    for (let h = ymin; h <= ymax; h += 10) { g.beginPath(); g.moveTo(L, Y(h)); g.lineTo(L + pw, Y(h)); g.stroke(); g.textAlign = 'right'; g.fillText(h, L - 6, Y(h) + 4); }
+    for (let d = lo; d <= hi; d++) {
+      g.beginPath(); g.moveTo(X(d), T); g.lineTo(X(d), T + ph); g.stroke();
+      g.textAlign = 'center'; g.fillText('10' + toSup(d), X(d), T + ph + 15);
+      if (d < hi) for (let k = 2; k < 10; k++) { const xx = X(d + Math.log10(k)); g.strokeStyle = '#141d27'; g.beginPath(); g.moveTo(xx, T + ph); g.lineTo(xx, T + ph - 4); g.stroke(); g.strokeStyle = '#1b2632'; }
+    }
+    g.strokeStyle = '#2b3a4b'; g.strokeRect(L, T, pw, ph);
+    g.textAlign = 'center'; g.fillText('ageing time (arbitrary units, log scale)', L + pw / 2, ch - 4);
+    g.save(); g.translate(13, T + ph / 2); g.rotate(-Math.PI / 2); g.fillText('Hardness (HV, indicative)', 0, 0); g.restore();
+
+    const line = (pts, col, w) => { if (pts.length < 2) return; g.beginPath(); pts.forEach((p, i) => { const x = X(Math.log10(p.t)), y = Y(p.H); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.strokeStyle = col; g.lineWidth = w; g.stroke(); };
+    history.forEach((h, i) => { g.globalAlpha = .55; line(h.pts, HIST_COLS[i % HIST_COLS.length], 1.6); g.globalAlpha = 1; });
+    line(trace, '#53b3ff', 2.4);
+    if (trace.length > 5 && Hmax > 0) {
+      const x = X(Math.log10(tAtMax)), y = Y(Hmax);
+      g.fillStyle = '#ffd166'; g.beginPath(); g.arc(x, y, 3.5, 0, Math.PI * 2); g.fill();
+      g.textAlign = 'left'; g.fillText('peak', x + 6, y - 6);
+    }
+    // legend
+    let ly = T + 6; g.textAlign = 'left';
+    const leg = history.map((h, i) => [h.label, HIST_COLS[i % HIST_COLS.length]]);
+    leg.push([`current: kT=${kT().toFixed(2)}, ${(cNom*100).toFixed(1)}%, ${vacs.length} vac`, '#53b3ff']);
+    for (const [txt, col] of leg) { g.fillStyle = col; g.fillRect(L + pw - 230, ly + 2, 14, 3); g.fillStyle = '#9fb2c2'; g.fillText(txt, L + pw - 210, ly + 7); ly += 15; }
+  }
+  const SUP = {'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+  function toSup(n){ return String(n).split('').map(c => SUP[c] || c).join(''); }
+
+  // ---------- stage + stats ----------
+  function stageText(){
+    if (kT() >= solvusKT(cNom)) return 'Above solvus: precipitates dissolve (solution treatment)';
+    if (t === 0 || lastStats.f < 0.003) return 'As-quenched: supersaturated solid solution';
+    if (Hs < Hmax - 4) return 'Over-aged: coarsening, Orowan bypass, softening';
+    // rising?
+    const lt = Math.log10(t) - 0.25; let Hpast = null;
+    for (let i = trace.length - 1; i >= 0; i--) if (Math.log10(trace[i].t) <= lt) { Hpast = trace[i].H; break; }
+    if (Hpast !== null && Hs - Hpast > 1.5) return 'Under-aged: clusters forming and growing, hardness rising';
+    return 'Peak-aged: fine precipitates near the shear/Orowan crossover';
+  }
+
+  function updateStats(){
+    const s = lastStats;
+    const items = [
+      ['Solute in solution', (s.css * 100).toFixed(2) + ' at.%'],
+      ['Equilibrium solubility', (Math.min(ceq(kT()), cNom) * 100).toFixed(2) + ' at.%'],
+      ['Precipitates (≥4 atoms)', s.nP],
+      ['Mean radius', s.rw ? s.rw.toFixed(2) + ' a' : '—'],
+      ['Precipitated fraction', (s.f * 100).toFixed(2) + ' %'],
+      ['Hardness', s.H.toFixed(0) + ' HV'],
+    ];
+    $('stats').innerHTML = items.map(([k, v]) => `<div class="stat"><span>${k}</span><b>${v}</b></div>`).join('');
+    $('stage').textContent = stageText();
+  }
+
+  // ---------- loop ----------
+  let lastLog = -Infinity;
+  function frame(){
+    if (!running) return;
+    jumps(40000 * parseInt(spd.value, 10));
+    analyse();
+    if (Hs > Hmax) { Hmax = Hs; tAtMax = t; }
+    const l = Math.log10(t);
+    if (l - lastLog > 0.008) { trace.push({t, H: Hs}); lastLog = l; }
+    draw(); drawChart(); updateStats();
+    requestAnimationFrame(frame);
+  }
+
+  $('start').addEventListener('click', () => {
+    running = !running;
+    $('start').textContent = running ? '⏸ Pause' : '▶ Age';
+    if (running) { lastLog = trace.length ? Math.log10(trace[trace.length - 1].t) : -Infinity; requestAnimationFrame(frame); }
+  });
+  $('quench').addEventListener('click', () => { lastLog = -Infinity; quench(); });
+  $('clear').addEventListener('click', () => { history = []; drawChart(); });
+  temp.addEventListener('input', () => { if (t > 0) tempChanged = true; refreshLabels(); updateStats(); drawChart(); });
+  conc.addEventListener('input', refreshLabels);
+  vac.addEventListener('input', () => { setVacancies(parseInt(vac.value, 10)); refreshLabels(); draw(); drawChart(); });
+  spd.addEventListener('input', refreshLabels);
+  $('showMatrix').addEventListener('change', draw);
+  window.addEventListener('resize', () => { sizeChart(); drawChart(); });
+
+  buildBackgrounds(); sizeChart(); quench();
+})();
+</script>
+</body>
+</html>
