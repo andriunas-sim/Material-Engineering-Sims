@@ -21,6 +21,7 @@
   canvas{display:block;width:100%;background:#0f141b;border-radius:6px}
   #micro{aspect-ratio:3/2}
   #chart{aspect-ratio:4/1;min-height:200px}
+  #thermal{aspect-ratio:2/1;margin-top:8px}
   .ctl{margin:12px 0}
   .ctl .top{display:flex;justify-content:space-between;align-items:baseline;font-size:.9rem}
   .ctl .top span:first-child{color:var(--muted)}
@@ -29,10 +30,13 @@
   input[type=range]{width:100%;margin:6px 0 0}
   .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
   .btn{appearance:none;border:1px solid #233246;background:#1a2532;color:var(--ink);padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:600;font-size:.9rem}
-  .btn:hover{background:#213044}
+  .btn:hover:not(:disabled){background:#213044}
   .btn.alt{background:#1a1f26;border-color:#2c3540}
+  .btn.cool{background:#13283a;border-color:#245074}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
   .stage{margin-top:14px;padding:10px;border-radius:10px;background:#0d141c;border:1px solid var(--line);font-size:.9rem}
   .stage b{display:block;font-size:1rem;margin-top:2px}
+  .sec{font-size:.85rem;color:var(--muted);margin-top:14px}
   .legend{display:flex;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin-top:10px}
   .chip{display:inline-flex;align-items:center;gap:6px;background:#131b25;border:1px solid var(--line);padding:5px 9px;border-radius:999px}
   .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
@@ -40,10 +44,6 @@
   .stat{background:#0d141c;border:1px solid var(--line);border-radius:10px;padding:7px 9px}
   .stat span{display:block;font-size:.72rem;color:var(--muted)}
   .stat b{font-size:1.05rem;font-variant-numeric:tabular-nums}
-  details{margin-top:16px;color:#c3d1dc;font-size:.92rem;line-height:1.55}
-  details summary{cursor:pointer;color:var(--ink);font-weight:600}
-  details .pad p{margin:.5em 0}
-  .eq{font-family:"Cambria Math","STIX Two Math",Cambria,Georgia,serif;font-size:1.02rem;color:var(--ink);padding:2px 0 2px 14px}
   label.check{display:flex;gap:8px;align-items:center;font-size:.85rem;color:var(--muted);margin-top:12px;cursor:pointer}
 </style>
 </head>
@@ -72,8 +72,8 @@
       <h2>Heat treatment</h2>
       <div class="pad">
         <div class="ctl">
-          <div class="top"><span>Ageing temperature, kT/ε</span><b id="tempV"></b></div>
-          <input id="temp" type="range" min="0.22" max="0.62" step="0.01" value="0.36">
+          <div class="top"><span>Ageing (hold) temperature, kT/ε</span><b id="tempV"></b></div>
+          <input id="temp" type="range" min="0.25" max="0.62" step="0.01" value="0.36">
           <div class="hint" id="tempHint"></div>
         </div>
         <div class="ctl">
@@ -87,26 +87,32 @@
           <div class="hint">No vacancies, no diffusion. More vacancies means faster ageing in real time.</div>
         </div>
         <div class="ctl">
-          <div class="top"><span>Animation speed</span><b id="spdV"></b></div>
+          <div class="top"><span>Animation speed (hold)</span><b id="spdV"></b></div>
           <input id="spd" type="range" min="1" max="10" step="1" value="5">
         </div>
         <label class="check"><input type="checkbox" id="showMatrix" checked> Show matrix atoms</label>
         <div class="btns">
-          <button id="start" class="btn">▶ Age</button>
+          <button id="start" class="btn">▶ Heat &amp; hold</button>
+          <button id="cool" class="btn cool" disabled>❄ Air cool</button>
+        </div>
+        <div class="btns" style="margin-top:8px">
           <button id="quench" class="btn alt">Solution treat &amp; quench</button>
           <button id="clear" class="btn alt">Clear old curves</button>
         </div>
-        <div class="stage">Stage<b id="stage">As-quenched: supersaturated solid solution</b></div>
+        <div class="stage">Stage<b id="stage"></b></div>
+        <div class="sec">Thermal history (schematic, not to scale)</div>
+        <canvas id="thermal" aria-label="Temperature versus process time"></canvas>
       </div>
     </div>
 
     <div class="card full">
-      <h2>Ageing curve: hardness vs log(ageing time)</h2>
+      <h2>Ageing curve: hardness vs log(time at temperature)</h2>
       <div class="pad"><canvas id="chart" aria-label="Hardness versus ageing time"></canvas>
-        <div class="hint" style="font-size:.78rem;color:#6f8696;margin-top:6px">Each new quench keeps the previous curve (faded), so you can compare ageing temperatures, compositions or vacancy contents. Hardness is indicative only, scaled to an Al–4Cu-type range.</div>
+        <div style="font-size:.78rem;color:#6f8696;margin-top:6px">Each new quench keeps the previous curve (faded), so you can compare ageing temperatures, compositions or vacancy contents. Hardness is indicative only, scaled to an Al–4Cu-type range.</div>
       </div>
     </div>
   </div>
+</div>
 
 <script>
 (() => {
@@ -116,6 +122,10 @@
   const MATRIX = 0, SOLUTE = 1, VAC = 2;
   const NMIN = 4, RC = 2.8, H0 = 45, KSS = 110, A = 230, B = A * Math.pow(RC, 1.5);
   const EM = 2, KTREF = 0.35;
+  // ---------- process ----------
+  const KT_ROOM = 0.20, KT_ST = 0.60;          // room temperature, solution-treatment temperature
+  const HEAT_FRAMES = 150, HEAT_TIME = 4;      // heat-up: ~2.5 s on screen, 4 time units
+  const COOL_FRAMES = 180, COOL_TIME = 30;     // air cool: ~3 s on screen, 30 time units (Newtonian)
 
   const nbr = new Int32Array(N * 4);
   for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) {
@@ -129,7 +139,7 @@
   let clusterSize = [];
   let vacs = [], nSol = 0, cNom = 0.05;
 
-  // ---------- thermodynamics ----------
+  // ---------- thermodynamics & kinetics ----------
   const KTC = 1 / (2 * Math.asinh(1));
   function ceq(kT){
     if (kT >= KTC) return 0.5;
@@ -140,23 +150,27 @@
     const m = 1 - 2 * c;
     return 1 / (2 * Math.asinh(Math.pow(1 - Math.pow(m, 8), -0.25)));
   }
+  const rate = T => Math.exp(-EM / T + EM / KTREF);   // vacancy jump frequency, relative
 
   // ---------- controls ----------
   const temp = $('temp'), conc = $('conc'), vac = $('vac'), spd = $('spd');
-  function kT(){ return parseFloat(temp.value); }
+  const kTset = () => parseFloat(temp.value);
   function refreshLabels(){
-    $('tempV').textContent = kT().toFixed(2);
+    $('tempV').textContent = kTset().toFixed(2);
     $('concV').textContent = parseFloat(conc.value).toFixed(1) + ' at.%';
     $('vacV').textContent = vac.value + '  (' + (vac.value / N * 100).toFixed(2) + ' %)';
     $('spdV').textContent = spd.value;
-    const ts = solvusKT(cNom), ce = ceq(kT());
+    const ts = solvusKT(cNom), ce = ceq(kTset());
     $('tempHint').innerHTML = `Solvus for this alloy: kT/ε = ${ts.toFixed(3)}. ` +
-      (kT() >= ts ? '<b style="color:#ff9f6b">Above solvus: solute dissolves.</b>' :
+      (kTset() >= ts ? '<b style="color:#ff9f6b">Above solvus: solute dissolves.</b>' :
        `Equilibrium solubility ${(ce*100).toFixed(2)} at.%, supersaturation ×${(cNom/ce).toFixed(0)}.`);
   }
 
   // ---------- state ----------
-  let t = 0, running = false, Hs = null, trace = [], history = [], Hmax = 0, tAtMax = 0, tempChanged = false;
+  let phase = 'quenched';     // quenched | heating | holding | cooling | cooled
+  let running = false, looping = false, Tnow = KT_ROOM, rampFrame = 0, coolT0 = 0;
+  let t = 0, Hs = null, trace = [], history = [], Hmax = 0, tAtMax = 0, tempChanged = false, finalCond = '';
+  let thermal = [], segs = [], xProc = 0, xHold0 = 0, tHold0 = 0;
   let lastStats = {nP:0, rw:0, f:0, css:0, H:0};
   const HIST_COLS = ['#8fd18f', '#c8a2ff', '#ffb36b', '#6bd6e0', '#f08fb8'];
 
@@ -167,6 +181,7 @@
       history.push({pts: trace, label: `kT=${trace.kT0.toFixed(2)}${tempChanged ? '*' : ''}, ${(cNom*100).toFixed(1)}%, ${trace.nv0} vac`});
       if (history.length > 5) history.shift();
     }
+    running = false;
     cNom = parseFloat(conc.value) / 100;
     occ.fill(MATRIX);
     const idx = shuffle(Array.from({length: N}, (_, i) => i));
@@ -175,8 +190,13 @@
     vacs = [];
     const nv = parseInt(vac.value, 10);
     for (let k = nSol; k < nSol + nv; k++) { occ[idx[k]] = VAC; vacs.push(idx[k]); }
-    t = 0; Hs = null; trace = []; trace.kT0 = kT(); trace.nv0 = nv; Hmax = 0; tAtMax = 0; tempChanged = false;
-    analyse(); refreshLabels(); draw(); drawChart(); updateStats();
+    t = 0; Hs = null; trace = []; trace.marks = []; trace.kT0 = kTset(); trace.nv0 = nv;
+    Hmax = 0; tAtMax = 0; tempChanged = false; finalCond = '';
+    phase = 'quenched'; Tnow = KT_ROOM;
+    thermal = [{x:0, T:KT_ST}, {x:1, T:KT_ST}, {x:1.08, T:KT_ROOM}, {x:1.5, T:KT_ROOM}];
+    segs = [{name:'solution treat', x0:0, x1:1}, {name:'quench', x0:1, x1:1.08}];
+    xProc = 1.5;
+    analyse(); refreshLabels(); updateButtons(); draw(); drawChart(); drawThermal(); updateStats();
   }
 
   function setVacancies(n){
@@ -187,10 +207,10 @@
     while (vacs.length > n) { const i = vacs.pop(); occ[i] = MATRIX; }
   }
 
-  // ---------- kinetics ----------
-  function jumps(K){
-    const nv = vacs.length; if (!nv) return;
-    const T = kT(), beta = 1 / T;
+  // ---------- vacancy jumps at temperature T ----------
+  function jumps(K, T){
+    const nv = vacs.length; if (!nv || K <= 0) return;
+    const beta = 1 / T;
     const acc = [1, Math.exp(-beta), Math.exp(-2*beta), Math.exp(-3*beta)];
     for (let a = 0; a < K; a++) {
       const vi = (Math.random() * nv) | 0, v = vacs[vi];
@@ -207,8 +227,17 @@
       }
       occ[v] = s; occ[n] = VAC; vacs[vi] = n;
     }
-    const G = Math.exp(-EM / T + EM / KTREF);
-    t += K / (nv * G * N);
+  }
+  // Advance a fixed amount of real time: number of jumps follows from temperature.
+  function advanceTime(dt){
+    const K = dt * vacs.length * rate(Tnow) * N;
+    jumps(Math.min(600000, Math.floor(K) + (Math.random() < K % 1 ? 1 : 0)), Tnow);
+    t += dt;
+  }
+  // Advance a fixed number of jumps (hold): real time follows from temperature.
+  function advanceJumps(K){
+    jumps(K, Tnow);
+    if (vacs.length) t += K / (vacs.length * rate(Tnow) * N);
   }
 
   // ---------- microstructure analysis ----------
@@ -240,9 +269,10 @@
     return Math.sqrt(sz / Math.PI) < RC ? 1 : 2;
   }
 
-  // ---------- drawing ----------
+  // ---------- drawing: microstructure ----------
   const micro = $('micro'), m = micro.getContext('2d');
   const chart = $('chart'), g = chart.getContext('2d');
+  const therm = $('thermal'), th = therm.getContext('2d');
   let dpr = 1, bgOn = null, bgOff = null;
 
   function buildBackgrounds(){
@@ -289,11 +319,14 @@
     }
   }
 
-  function sizeChart(){
-    const r = chart.getBoundingClientRect();
-    chart.width = Math.max(300, r.width) * dpr; chart.height = Math.max(200, r.height) * dpr;
+  function sizeCanvases(){
+    for (const c of [chart, therm]) {
+      const r = c.getBoundingClientRect();
+      c.width = Math.max(200, r.width) * dpr; c.height = Math.max(100, r.height) * dpr;
+    }
   }
 
+  // ---------- drawing: ageing curve ----------
   function drawChart(){
     const cw = chart.width / dpr, ch = chart.height / dpr;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -313,11 +346,20 @@
     for (let d = lo; d <= hi; d++) {
       g.beginPath(); g.moveTo(X(d), T); g.lineTo(X(d), T + ph); g.stroke();
       g.textAlign = 'center'; g.fillText('10' + toSup(d), X(d), T + ph + 15);
-      if (d < hi) for (let k = 2; k < 10; k++) { const xx = X(d + Math.log10(k)); g.strokeStyle = '#141d27'; g.beginPath(); g.moveTo(xx, T + ph); g.lineTo(xx, T + ph - 4); g.stroke(); g.strokeStyle = '#1b2632'; }
     }
     g.strokeStyle = '#2b3a4b'; g.strokeRect(L, T, pw, ph);
-    g.textAlign = 'center'; g.fillText('ageing time (arbitrary units, log scale)', L + pw / 2, ch - 4);
+    g.textAlign = 'center'; g.fillText('time since start of heating (arbitrary units, log scale)', L + pw / 2, ch - 4);
     g.save(); g.translate(13, T + ph / 2); g.rotate(-Math.PI / 2); g.fillText('Hardness (HV, indicative)', 0, 0); g.restore();
+
+    // process markers on current trace
+    g.setLineDash([4, 4]); g.strokeStyle = '#4a6077'; g.textAlign = 'left';
+    for (const mk of (trace.marks || [])) {
+      if (mk.t <= 0) continue;
+      const x = X(Math.log10(mk.t));
+      g.beginPath(); g.moveTo(x, T); g.lineTo(x, T + ph); g.stroke();
+      g.fillStyle = '#8aa1b1'; g.fillText(mk.label, x + 4, T + ph - 6);
+    }
+    g.setLineDash([]);
 
     const line = (pts, col, w) => { if (pts.length < 2) return; g.beginPath(); pts.forEach((p, i) => { const x = X(Math.log10(p.t)), y = Y(p.H); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.strokeStyle = col; g.lineWidth = w; g.stroke(); };
     history.forEach((h, i) => { g.globalAlpha = .55; line(h.pts, HIST_COLS[i % HIST_COLS.length], 1.6); g.globalAlpha = 1; });
@@ -327,69 +369,157 @@
       g.fillStyle = '#ffd166'; g.beginPath(); g.arc(x, y, 3.5, 0, Math.PI * 2); g.fill();
       g.textAlign = 'left'; g.fillText('peak', x + 6, y - 6);
     }
-    // legend
     let ly = T + 6; g.textAlign = 'left';
     const leg = history.map((h, i) => [h.label, HIST_COLS[i % HIST_COLS.length]]);
-    leg.push([`current: kT=${kT().toFixed(2)}, ${(cNom*100).toFixed(1)}%, ${vacs.length} vac`, '#53b3ff']);
+    leg.push([`current: kT=${kTset().toFixed(2)}, ${(cNom*100).toFixed(1)}%, ${vacs.length} vac`, '#53b3ff']);
     for (const [txt, col] of leg) { g.fillStyle = col; g.fillRect(L + pw - 230, ly + 2, 14, 3); g.fillStyle = '#9fb2c2'; g.fillText(txt, L + pw - 210, ly + 7); ly += 15; }
   }
   const SUP = {'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
   function toSup(n){ return String(n).split('').map(c => SUP[c] || c).join(''); }
 
+  // ---------- drawing: thermal history ----------
+  function drawThermal(){
+    const cw = therm.width / dpr, ch = therm.height / dpr;
+    th.setTransform(dpr, 0, 0, dpr, 0, 0);
+    th.clearRect(0, 0, cw, ch);
+    const L = 30, R = 8, T = 10, Bm = 26, pw = cw - L - R, ph = ch - T - Bm;
+    const xmax = Math.max(5.5, xProc + 0.4), Tlo = 0.15, Thi = 0.66;
+    const X = x => L + x / xmax * pw, Y = k => T + (1 - (k - Tlo) / (Thi - Tlo)) * ph;
+    th.strokeStyle = '#2b3a4b'; th.lineWidth = 1; th.strokeRect(L, T, pw, ph);
+    th.font = '10px system-ui,sans-serif';
+    // reference lines
+    const ref = (k, txt, col, left) => { th.setLineDash([3, 3]); th.strokeStyle = col; th.beginPath(); th.moveTo(L, Y(k)); th.lineTo(L + pw, Y(k)); th.stroke(); th.setLineDash([]); th.fillStyle = col; th.textAlign = left ? 'left' : 'right'; th.fillText(txt, left ? L + 4 : L + pw - 3, Y(k) - 3); };
+    ref(solvusKT(cNom), 'solvus', '#b0605a', false);
+    ref(KT_ROOM, 'room temperature', '#6a8197', true);
+    // path
+    if (thermal.length > 1) {
+      th.beginPath(); thermal.forEach((p, i) => i ? th.lineTo(X(p.x), Y(p.T)) : th.moveTo(X(p.x), Y(p.T)));
+      th.strokeStyle = '#ff9f6b'; th.lineWidth = 2; th.stroke();
+      const p = thermal[thermal.length - 1];
+      th.fillStyle = '#ffd166'; th.beginPath(); th.arc(X(p.x), Y(p.T), 3.5, 0, Math.PI * 2); th.fill();
+    }
+    // segment labels
+    th.fillStyle = '#8aa1b1'; th.textAlign = 'center';
+    segs.forEach((s, i) => {
+      const xm = X((s.x0 + s.x1) / 2), yy = T + ph + 11 + (i % 2) * 10;
+      th.fillText(s.name, xm, yy);
+    });
+    th.save(); th.translate(11, T + ph / 2); th.rotate(-Math.PI / 2); th.textAlign = 'center'; th.fillText('T', 0, 0); th.restore();
+  }
+  function pushThermal(){
+    const last = thermal[thermal.length - 1];
+    if (!last || xProc - last.x > 0.004 || Math.abs(Tnow - last.T) > 0.002) thermal.push({x: xProc, T: Tnow});
+    if (segs.length) segs[segs.length - 1].x1 = xProc;
+  }
+
   // ---------- stage + stats ----------
-  function stageText(){
-    if (kT() >= solvusKT(cNom)) return 'Above solvus: precipitates dissolve (solution treatment)';
-    if (t === 0 || lastStats.f < 0.003) return 'As-quenched: supersaturated solid solution';
-    if (Hs < Hmax - 4) return 'Over-aged: coarsening, Orowan bypass, softening';
-    // rising?
+  function holdCondition(){
+    if (Tnow >= solvusKT(cNom)) return 'above solvus: precipitates dissolve';
+    if (lastStats.f < 0.003) return 'supersaturated solid solution, clusters just forming';
+    if (Hs < Hmax - 4) return 'over-aged: coarsening, Orowan bypass, softening';
     const lt = Math.log10(t) - 0.25; let Hpast = null;
     for (let i = trace.length - 1; i >= 0; i--) if (Math.log10(trace[i].t) <= lt) { Hpast = trace[i].H; break; }
-    if (Hpast !== null && Hs - Hpast > 1.5) return 'Under-aged: clusters forming and growing, hardness rising';
-    return 'Peak-aged: fine precipitates near the shear/Orowan crossover';
+    if (Hpast !== null && Hs - Hpast > 1.5) return 'under-aged: clusters growing, hardness rising';
+    return 'peak-aged: fine precipitates near the shear/Orowan crossover';
+  }
+  function stageText(){
+    switch (phase) {
+      case 'quenched': return 'As-quenched at room temperature: supersaturated solid solution';
+      case 'heating':  return 'Heating to the ageing temperature: diffusion speeding up';
+      case 'holding':  return 'Holding: ' + holdCondition();
+      case 'cooling':  return 'Air cooling: diffusion slowing, microstructure freezing in';
+      case 'cooled':   return 'Cooled to room temperature. Final condition: ' + finalCond;
+    }
   }
 
   function updateStats(){
     const s = lastStats;
     const items = [
+      ['Temperature, kT/ε', Tnow.toFixed(3)],
       ['Solute in solution', (s.css * 100).toFixed(2) + ' at.%'],
-      ['Equilibrium solubility', (Math.min(ceq(kT()), cNom) * 100).toFixed(2) + ' at.%'],
+      ['Equilibrium solubility', (Math.min(ceq(Tnow), cNom) * 100).toFixed(2) + ' at.%'],
       ['Precipitates (≥4 atoms)', s.nP],
       ['Mean radius', s.rw ? s.rw.toFixed(2) + ' a' : '—'],
-      ['Precipitated fraction', (s.f * 100).toFixed(2) + ' %'],
       ['Hardness', s.H.toFixed(0) + ' HV'],
     ];
     $('stats').innerHTML = items.map(([k, v]) => `<div class="stat"><span>${k}</span><b>${v}</b></div>`).join('');
     $('stage').textContent = stageText();
   }
 
-  // ---------- loop ----------
+  function updateButtons(){
+    const b = $('start');
+    if (phase === 'quenched') b.textContent = '▶ Heat & hold';
+    else if (phase === 'cooled') b.textContent = '▶ Re-heat & hold';
+    else b.textContent = running ? '⏸ Pause' : '▶ Resume';
+    $('cool').disabled = !(phase === 'heating' || phase === 'holding');
+  }
+
+  // ---------- main loop ----------
   let lastLog = -Infinity;
   function frame(){
-    if (!running) return;
-    jumps(40000 * parseInt(spd.value, 10));
+    if (!running) { looping = false; return; }
+    if (phase === 'heating') {
+      rampFrame++;
+      const s = Math.min(1, rampFrame / HEAT_FRAMES);
+      Tnow = KT_ROOM + (kTset() - KT_ROOM) * s;
+      advanceTime(HEAT_TIME / HEAT_FRAMES);
+      xProc += 0.8 / HEAT_FRAMES;
+      if (s >= 1) {
+        phase = 'holding'; tHold0 = t; xHold0 = xProc; trace.kT0 = kTset();
+        trace.marks.push({t, label: 'hold'}); segs.push({name: 'hold', x0: xProc, x1: xProc});
+      }
+    } else if (phase === 'holding') {
+      Tnow = kTset();
+      advanceJumps(40000 * parseInt(spd.value, 10));
+      xProc = xHold0 + 0.9 * Math.log10(1 + (t - tHold0));
+    } else if (phase === 'cooling') {
+      rampFrame++;
+      const s = Math.min(1, rampFrame / COOL_FRAMES);
+      Tnow = KT_ROOM + (coolT0 - KT_ROOM) * Math.exp(-5 * s);
+      advanceTime(COOL_TIME / COOL_FRAMES);
+      xProc += 1.0 / COOL_FRAMES;
+      if (s >= 1) { Tnow = KT_ROOM; phase = 'cooled'; running = false; }
+    }
+    pushThermal();
     analyse();
-    if (Hs > Hmax) { Hmax = Hs; tAtMax = t; }
+    if (phase === 'holding' && Hs > Hmax) { Hmax = Hs; tAtMax = t; }
     const l = Math.log10(t);
     if (l - lastLog > 0.008) { trace.push({t, H: Hs}); lastLog = l; }
-    draw(); drawChart(); updateStats();
+    draw(); drawChart(); drawThermal(); updateStats(); updateButtons();
     requestAnimationFrame(frame);
+  }
+  function ensureLoop(){ if (!looping) { looping = true; requestAnimationFrame(frame); } }
+
+  function startHeating(){
+    if (phase === 'cooled') { trace.marks.push({t, label: 're-heat'}); xProc += 0.3; pushThermal(); }
+    phase = 'heating'; rampFrame = 0; Tnow = KT_ROOM;
+    segs.push({name: 'heat', x0: xProc, x1: xProc});
   }
 
   $('start').addEventListener('click', () => {
-    running = !running;
-    $('start').textContent = running ? '⏸ Pause' : '▶ Age';
-    if (running) { lastLog = trace.length ? Math.log10(trace[trace.length - 1].t) : -Infinity; requestAnimationFrame(frame); }
+    if (phase === 'quenched' || phase === 'cooled') { startHeating(); running = true; }
+    else running = !running;
+    if (running) { lastLog = trace.length ? Math.log10(trace[trace.length - 1].t) : -Infinity; ensureLoop(); }
+    updateButtons();
+  });
+  $('cool').addEventListener('click', () => {
+    if (!(phase === 'heating' || phase === 'holding')) return;
+    if (phase === 'holding') finalCond = holdCondition().split(':')[0];
+    else finalCond = 'barely aged (cooled during heat-up)';
+    phase = 'cooling'; rampFrame = 0; coolT0 = Tnow;
+    trace.marks.push({t, label: 'air cool'}); segs.push({name: 'air cool', x0: xProc, x1: xProc});
+    running = true; ensureLoop(); updateButtons();
   });
   $('quench').addEventListener('click', () => { lastLog = -Infinity; quench(); });
   $('clear').addEventListener('click', () => { history = []; drawChart(); });
-  temp.addEventListener('input', () => { if (t > 0) tempChanged = true; refreshLabels(); updateStats(); drawChart(); });
+  temp.addEventListener('input', () => { if (t > 0) tempChanged = true; refreshLabels(); drawChart(); drawThermal(); });
   conc.addEventListener('input', refreshLabels);
   vac.addEventListener('input', () => { setVacancies(parseInt(vac.value, 10)); refreshLabels(); draw(); drawChart(); });
   spd.addEventListener('input', refreshLabels);
   $('showMatrix').addEventListener('change', draw);
-  window.addEventListener('resize', () => { sizeChart(); drawChart(); });
+  window.addEventListener('resize', () => { sizeCanvases(); drawChart(); drawThermal(); });
 
-  buildBackgrounds(); sizeChart(); quench();
+  buildBackgrounds(); sizeCanvases(); quench();
 })();
 </script>
 </body>
