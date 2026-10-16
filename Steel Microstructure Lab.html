@@ -1,0 +1,734 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Steel Microstructure Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: lab bench — left = map (phase / TTT diagram + controls), right = microscope (specimen + readouts) */
+:root{
+  --bg:#e9ecee; --panel:#f6f7f8; --ink:#14181b; --muted:#56626b; --line:#c9d0d5; --grid:#dbe0e4;
+  --accent:#c2531a; --accent-soft:rgba(194,83,26,.12); --scope:#0c0d0e;
+  --f-gamma:rgba(222,150,70,.16); --f-two:rgba(120,140,160,.10); --f-low:rgba(70,110,150,.08);
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1214; --panel:#171b1e; --ink:#e6e9eb; --muted:#97a3ac; --line:#2c3439; --grid:#232a2f;
+  --accent:#ef8a3e; --accent-soft:rgba(239,138,62,.14); --scope:#060707;
+  --f-gamma:rgba(222,150,70,.13); --f-two:rgba(150,170,190,.08); --f-low:rgba(100,140,180,.07); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1214; --panel:#171b1e; --ink:#e6e9eb; --muted:#97a3ac; --line:#2c3439; --grid:#232a2f;
+  --accent:#ef8a3e; --accent-soft:rgba(239,138,62,.14); --scope:#060707;
+  --f-gamma:rgba(222,150,70,.13); --f-two:rgba(150,170,190,.08); --f-low:rgba(100,140,180,.07); color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.page{max-width:1240px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:grid;gap:4px;margin-bottom:14px}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-stretch:118%;font-weight:800;font-size:clamp(26px,4vw,38px);line-height:1.05;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.lede{margin:2px 0 0;color:var(--muted);max-width:72ch}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:18px}
+.tab{appearance:none;border:0;background:none;color:var(--muted);font:600 14px/1 var(--body);padding:11px 14px 12px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tab span{font-family:var(--mono);font-weight:400;font-size:12px;margin-right:6px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lab{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:920px){.lab{grid-template-columns:minmax(0,1fr)}}
+.col{display:grid;gap:14px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;min-width:0}
+.ctl{display:grid;gap:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+label.lbl,.lbl{font-size:12px;font-family:var(--mono);color:var(--muted);letter-spacing:.03em}
+.slider{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center}
+.slider output{font-family:var(--mono);font-size:13px;min-width:7.5ch;text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.chip{appearance:none;border:1px solid var(--line);background:transparent;color:var(--ink);font:500 13px/1 var(--body);padding:7px 10px;border-radius:4px;cursor:pointer}
+.chip:hover{border-color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.chip small{font-family:var(--mono);font-size:11px;opacity:.75;margin-left:4px}
+.chip:disabled{opacity:.4;cursor:not-allowed}
+.transport{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}
+.play{appearance:none;border:0;background:var(--accent);color:#fff;font:700 13px/1 var(--body);padding:10px 14px;border-radius:4px;cursor:pointer;display:inline-flex;gap:8px;align-items:center;min-width:92px;justify-content:center}
+.play svg{width:12px;height:12px;fill:currentColor}
+.diagram{width:100%;height:auto;display:block;touch-action:none;user-select:none}
+.diagram text{font-family:var(--mono);fill:var(--ink)}
+.diagram .ax{stroke:var(--ink);stroke-width:1}
+.diagram .gl{stroke:var(--grid);stroke-width:1}
+.diagram .ln{fill:none;stroke:var(--ink);stroke-width:1.6}
+.diagram .tick{font-size:10.5px;fill:var(--muted)}
+.diagram .rl{font-size:12px;font-weight:600}
+.diagram .sl{font-size:10px;fill:var(--muted)}
+.diagram .cur{fill:var(--accent);stroke:var(--panel);stroke-width:2}
+.diagram .cline{stroke:var(--accent);stroke-width:1.2;stroke-dasharray:4 3}
+.diagram .tie{stroke:var(--accent);stroke-width:2.5}
+.diagram .path{fill:none;stroke:var(--accent);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.diagram .pathghost{fill:none;stroke:var(--accent);stroke-opacity:.28;stroke-width:2;stroke-dasharray:3 4}
+.hint{font-size:12px;color:var(--muted);margin:6px 0 0}
+/* microscope */
+.scope{margin:0;display:grid;gap:8px}
+.scopebar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.status{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.status b{color:var(--ink);font-weight:600}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{appearance:none;border:0;background:transparent;color:var(--muted);font:600 12px/1 var(--body);padding:7px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+.canvaswrap{position:relative;width:100%;max-width:560px;margin:0 auto;aspect-ratio:1;background:var(--scope);border-radius:50%}
+canvas#micro{width:100%;height:100%;display:block;border-radius:50%}
+.loading{position:absolute;inset:0;display:grid;place-items:center;color:#cfd4d8;font:13px var(--mono)}
+.note{font-size:12px;color:var(--muted);text-align:center;margin:0}
+/* readouts */
+.big{display:flex;gap:18px;align-items:baseline;flex-wrap:wrap}
+.big .T{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.big .sub{font-family:var(--mono);font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.stage{font-family:var(--display);font-weight:700;font-size:17px;margin:10px 0 2px;font-stretch:105%}
+.caption{margin:0;max-width:66ch}
+.bars{display:grid;gap:12px;margin-top:12px}
+.barhead{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-family:var(--mono);color:var(--muted);margin-bottom:4px}
+.stack{display:flex;height:14px;border-radius:3px;overflow:hidden;background:var(--grid)}
+.stack i{display:block;height:100%;transition:width .12s linear}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:12.5px}
+.legend span{display:inline-flex;gap:6px;align-items:center;font-variant-numeric:tabular-nums}
+.legend em{font-style:normal;font-family:var(--mono);font-size:12px}
+.sw{width:10px;height:10px;border-radius:2px;display:inline-block}
+.math{font-family:var(--mono);font-size:13px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:grid;gap:8px;overflow-x:auto}
+.eq{display:flex;align-items:center;gap:6px;flex-wrap:wrap;white-space:nowrap}
+.fr{display:inline-flex;flex-direction:column;text-align:center;vertical-align:middle}
+.fr>span:first-child{border-bottom:1px solid currentColor;padding:0 3px 1px}
+.fr>span:last-child{padding:1px 3px 0}
+.res{color:var(--accent);font-weight:600}
+.hard{display:grid;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.gauge{position:relative;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--grid),var(--muted))}
+.gauge b{position:absolute;top:-4px;width:3px;height:16px;background:var(--accent);border-radius:1px;transform:translateX(-1px);transition:left .12s}
+.gticks{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.post{display:grid;gap:8px;margin-top:4px}
+select{font:500 13px var(--body);padding:6px 8px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink)}
+details.notes{margin-top:22px;border-top:1px solid var(--line);padding-top:12px;color:var(--muted);font-size:13px}
+details.notes summary{cursor:pointer;font-weight:600;color:var(--ink)}
+details.notes ul{padding-left:18px;margin:8px 0 0;max-width:90ch}
+details.notes code{font-family:var(--mono);font-size:12px}
+@media (prefers-reduced-motion: reduce){.stack i,.gauge b{transition:none}}
+</style>
+
+<div class="page">
+  <header>
+    <div class="eyebrow">INU1126 Engineering Materials · Ferrous alloys &amp; heat treatment</div>
+    <h1>Steel Microstructure Lab</h1>
+    <p class="lede">Cool a plain-carbon steel from the austenite field and watch the microstructure form. Mode 1 follows the Fe–Fe₃C phase diagram (slow, equilibrium cooling). Mode 2 follows the TTT diagram for 0.76 %C steel at different cooling rates, then tempers or spheroidises the result.</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Simulation mode">
+    <button class="tab" role="tab" id="tab-slow" aria-selected="true" aria-controls="panel-slow"><span>1</span>Slow cooling · phase diagram</button>
+    <button class="tab" role="tab" id="tab-ttt" aria-selected="false" aria-controls="panel-ttt"><span>2</span>Cooling rate · TTT</button>
+  </nav>
+
+  <main class="lab">
+    <section class="col">
+      <!-- ============ MODE 1 ============ -->
+      <div id="panel-slow" role="tabpanel" aria-labelledby="tab-slow" class="col">
+        <div class="card ctl">
+          <div class="slider">
+            <label class="lbl" for="c0">Carbon, C₀</label>
+            <input type="range" id="c0" min="0.05" max="1.6" step="0.01" value="0.40">
+            <output id="c0out">0.40 wt%</output>
+          </div>
+          <div class="row" id="cchips">
+            <button class="chip" data-c="0.10">0.10 %C <small>low-C</small></button>
+            <button class="chip" data-c="0.40">0.40 %C <small>medium</small></button>
+            <button class="chip" data-c="0.76">0.76 %C <small>eutectoid</small></button>
+            <button class="chip" data-c="1.20">1.20 %C <small>hyper</small></button>
+          </div>
+          <div class="transport">
+            <button class="play" id="playSlow"><svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z"/></svg><span>Cool</span></button>
+            <input type="range" id="scrubSlow" min="0" max="1000" step="1" value="0" aria-label="Cooling progress">
+          </div>
+        </div>
+        <div class="card">
+          <svg class="diagram" id="pd" viewBox="0 0 540 400" role="img" aria-label="Iron–iron carbide phase diagram, steel region"></svg>
+          <p class="hint">Click or drag on the diagram to change C₀. The orange line is the tie line used by the lever rule.</p>
+        </div>
+      </div>
+
+      <!-- ============ MODE 2 ============ -->
+      <div id="panel-ttt" role="tabpanel" aria-labelledby="tab-ttt" class="col" hidden>
+        <div class="card ctl">
+          <div class="lbl">Route from 900 °C (0.76 %C, fully austenitic)</div>
+          <div class="row" id="routes">
+            <button class="chip" data-r="furnace">Furnace cool <small>anneal</small></button>
+            <button class="chip" data-r="air">Air cool <small>normalise</small></button>
+            <button class="chip" data-r="oil">Oil quench</button>
+            <button class="chip" data-r="water">Water quench</button>
+          </div>
+          <div id="contCtl" class="slider">
+            <label class="lbl" for="rate">Rate at 700 °C</label>
+            <input type="range" id="rate" min="-1.5" max="3" step="0.01" value="0.36">
+            <output id="rateout">2.3 °C/s</output>
+          </div>
+          <div class="transport">
+            <button class="play" id="playTTT"><svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z"/></svg><span>Cool</span></button>
+            <input type="range" id="scrubTTT" min="0" max="1000" step="1" value="0" aria-label="Time (log scale)">
+          </div>
+        </div>
+        <div class="card">
+          <svg class="diagram" id="ttt" viewBox="0 0 540 400" role="img" aria-label="TTT diagram for 0.76 %C steel with cooling path"></svg>
+          <p class="hint">Isothermal TTT curves (start, 50 %, finish) as on the slides, with the cooling path overlaid. Time axis is logarithmic.</p>
+        </div>
+        <div class="card post">
+          <div class="lbl">After cooling to 20 °C</div>
+          <div class="row">
+            <button class="chip" id="btnTemper" disabled>Temper 1 h</button>
+            <select id="temperT" aria-label="Tempering temperature">
+              <option value="200">at 200 °C</option>
+              <option value="400">at 400 °C</option>
+              <option value="500" selected>at 500 °C</option>
+              <option value="600">at 600 °C</option>
+            </select>
+            <button class="chip" id="btnSph" disabled>Spheroidise <small>700 °C · 30 h</small></button>
+            <button class="chip" id="btnUndo" disabled>As-cooled</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="col">
+      <figure class="scope card">
+        <div class="scopebar">
+          <div class="status" id="scopeStatus">In situ at <b>900 °C</b></div>
+          <div class="seg" role="group" aria-label="Specimen rendering">
+            <button id="mEtch" aria-pressed="true">Etched</button>
+            <button id="mCol" aria-pressed="false">Colour by constituent</button>
+          </div>
+        </div>
+        <div class="canvaswrap">
+          <canvas id="micro" width="560" height="560" aria-label="Simulated micrograph"></canvas>
+          <div class="loading" id="loading">Preparing specimen…</div>
+        </div>
+        <p class="note">Field of view ≈ 200 µm. Pearlite lamellae are drawn several times coarser than true scale (real spacing ≈ 0.1–1 µm). Martensite plate lengths are to scale.</p>
+      </figure>
+
+      <div class="card" id="ro-slow">
+        <div class="big"><div class="T" id="sT">900 °C</div><div class="sub" id="sClass">0.40 %C · hypoeutectoid · medium-carbon steel</div></div>
+        <div class="stage" id="sStage">Austenite</div>
+        <p class="caption" id="sCap"></p>
+        <div class="bars">
+          <div><div class="barhead"><span>Phases (lever rule)</span><span id="sPhSum"></span></div><div class="stack" id="sPhBar"></div><div class="legend" id="sPhLeg"></div></div>
+          <div><div class="barhead"><span>Microconstituents (what the micrograph shows)</span></div><div class="stack" id="sMcBar"></div><div class="legend" id="sMcLeg"></div></div>
+        </div>
+        <div class="math" id="sMath"></div>
+      </div>
+
+      <div class="card" id="ro-ttt" hidden>
+        <div class="big"><div class="T" id="tT">900 °C</div><div class="sub" id="tTime">t = 0 s</div></div>
+        <div class="stage" id="tStage">Austenite</div>
+        <p class="caption" id="tCap"></p>
+        <div class="bars">
+          <div><div class="barhead"><span>Microconstituents</span><span id="tInc"></span></div><div class="stack" id="tBar"></div><div class="legend" id="tLeg"></div></div>
+        </div>
+        <div class="hard">
+          <div class="barhead"><span>Indicative hardness at 20 °C</span><span id="tHB" class="res">—</span></div>
+          <div class="gauge"><b id="tGauge" style="left:0%"></b></div>
+          <div class="gticks"><span>100</span><span>200</span><span>300</span><span>400</span><span>500</span><span>600</span><span>700</span><span>800</span></div>
+          <div class="gticks" style="justify-content:flex-start;gap:4px 14px;flex-wrap:wrap"><span>Reference: spheroidite ≈ 170</span><span>coarse pearlite ≈ 200</span><span>fine pearlite ≈ 330</span><span>martensite ≈ 700</span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <details class="notes">
+    <summary>Model notes and assumptions</summary>
+    <ul>
+      <li>Phase boundaries (A3, Acm, A1 = 727 °C, eutectoid 0.76 %C, α solubility 0.022 %C, Fe₃C 6.67 %C) are piecewise fits to the Fe–Fe₃C diagram used in the lecture. Mode 1 assumes equilibrium: fractions come straight from the lever rule, and the eutectoid reaction is shown as an isothermal hold at 727 °C.</li>
+      <li>Mode 2 uses JMAK kinetics, <code>X = 1 − exp(−b·tⁿ)</code>, with <code>n</code> and <code>b</code> fitted at each temperature to approximate 1 % and 99 % curves for plain 0.76 %C steel (nose ≈ 540 °C, under 1 s). Continuous cooling uses Scheil additivity on the isothermal curves. Diffusional transformation is stopped below 450 °C, where the remaining austenite waits for Ms.</li>
+      <li>Martensite uses Koistinen–Marburger, <code>f = 1 − exp(−0.011(Ms − T))</code> with Ms = 220 °C. This leaves about 11 % retained austenite at 20 °C, because Mf for 0.76 %C lies below room temperature.</li>
+      <li>Hardness is a rule-of-mixtures estimate (martensite HB 700, as on the slide), ±15 %. Use it for comparison, not for design.</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+(()=>{
+"use strict";
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const fmt=(v,d=1)=>(Math.round(v*10**d)/10**d).toFixed(d);
+const pct=v=>(v*100).toFixed(1)+' %';
+
+/* ================= Fe–C constants & boundaries ================= */
+const CE=0.76, CA=0.022, CC=6.67, TE=727;
+const A3T=[[0,912],[0.1,886],[0.2,862],[0.3,838],[0.4,815],[0.5,792],[0.6,768],[0.76,727]];
+const ACM=[[0.76,727],[1.0,790],[1.2,842],[1.4,895],[1.6,950],[1.8,1010],[2.0,1080],[2.11,1148]];
+function lin(tab,x){ if(x<=tab[0][0]) return tab[0][1]; for(let i=0;i<tab.length-1;i++){const a=tab[i],b=tab[i+1]; if(x<=b[0]) return a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0]);} return tab[tab.length-1][1]; }
+function linInv(tab,y){ // monotonic in y (either direction)
+  for(let i=0;i<tab.length-1;i++){const a=tab[i],b=tab[i+1]; const lo=Math.min(a[1],b[1]),hi=Math.max(a[1],b[1]); if(y>=lo&&y<=hi) return a[0]+(b[0]-a[0])*(y-a[1])/(b[1]-a[1]);}
+  return NaN; }
+const A3=c=>lin(A3T,c), A3inv=T=>linInv(A3T,T), Acm=c=>lin(ACM,c), AcmInv=T=>linInv(ACM,T);
+const alphaB=T=>T>=TE? CA*(912-T)/(912-TE) : CA*Math.pow(Math.max(0,(T-20)/(TE-20)),2);
+
+/* ================= TTT kinetics (0.76 %C) ================= */
+const TTT=[[720,300,1e4],[710,30,800],[700,10,250],[680,3.5,60],[650,1.5,15],[620,0.9,8],[590,0.6,5],[560,0.5,4.5],[540,0.55,5],[520,0.8,8],[500,1.2,13],[450,3,40],[400,7,120],[350,20,400],[300,70,1500],[250,250,6000],[220,700,2e4],[200,2000,6e4]].map(r=>[r[0],r[1]*1.6,r[2]*1.6]);
+const MS=220, KM=0.011, TNOSE=540;
+function tttT(T,i){
+  if(T>=TE) return Infinity;
+  if(T>720){const f=(T-720)/7; return Math.exp(Math.log(TTT[0][i])+f*9);}
+  for(let k=0;k<TTT.length-1;k++){const a=TTT[k],b=TTT[k+1]; if(T<=a[0]&&T>=b[0]){const f=(a[0]-T)/(a[0]-b[0]); return Math.exp(Math.log(a[i])*(1-f)+Math.log(b[i])*f);}}
+  return Infinity;
+}
+const nB=T=>{const ts=tttT(T,1),tf=tttT(T,2); const n=Math.log(Math.log(100)/-Math.log(0.99))/Math.log(tf/ts); return [n,-Math.log(0.99)/Math.pow(ts,n)];};
+const lamPx=Tf=>clamp(2.4+120/Math.max(1,TE-Tf),2.7,8);
+const Hpear=T=>clamp(180+1.0*(TE-T),180,370), HMART=700, HRA=240, HSPH=170;
+const Htemp=Tt=>700-0.9*(Tt-200);
+
+/* ================= RNG & noise ================= */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+const rnd=mulberry32(20261015);
+function hash(i){i=Math.imul(i^0x9e3779b9,0x85ebca6b);i^=i>>>13;i=Math.imul(i,0xc2b2ae35);i^=i>>>16;return (i>>>0)/4294967296;}
+const hash2=(x,y,s)=>hash(Math.imul(x,73856093)^Math.imul(y,19349663)^Math.imul(s+1,83492791));
+function vnoise(x,y,s){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+  const a=hash2(xi,yi,s),b=hash2(xi+1,yi,s),c=hash2(xi,yi+1,s),d=hash2(xi+1,yi+1,s); const ab=a+(b-a)*u, cd=c+(d-c)*u; return ab+(cd-ab)*v;}
+const fbm=(x,y,s)=>vnoise(x,y,s)*0.65+vnoise(x*2.13,y*2.13,s+17)*0.35;
+
+/* ================= Specimen geometry ================= */
+const S=560, CX=280, CY=280, RAD=272, NPX=S*S;
+const inside=new Uint8Array(NPX); let inIdx;
+const gId=new Int16Array(NPX), dgb=new Float32Array(NPX), colId=new Int32Array(NPX), ferId=new Int32Array(NPX);
+const lamU=new Float32Array(NPX), lamV=new Float32Array(NPX);
+const plateId=new Int32Array(NPX).fill(-1), plateD=new Uint8Array(NPX); const plAng=[];
+let ordFer, ordFilm, ordNod, ordMart, NIN, grains=[], grainShade=[], cols=[];
+const st=new Uint8Array(NPX), fT=new Float32Array(NPX);
+
+function poisson(minD,x0,y0,x1,y1,tries,filter){const pts=[];const m2=minD*minD;
+  for(let k=0;k<tries;k++){const x=x0+rnd()*(x1-x0),y=y0+rnd()*(y1-y0); if(filter&&!filter(x,y)) continue; let ok=true; for(const p of pts){const dx=p[0]-x,dy=p[1]-y; if(dx*dx+dy*dy<m2){ok=false;break;}} if(ok) pts.push([x,y]);}
+  return pts;}
+function sortBy(key){const o=Uint32Array.from(inIdx); o.sort((a,b)=>key[a]-key[b]); return o;}
+
+function buildSpecimen(){
+  const list=[];
+  for(let y=0;y<S;y++)for(let x=0;x<S;x++){const dx=x-CX+0.5,dy=y-CY+0.5; if(dx*dx+dy*dy<=RAD*RAD){inside[y*S+x]=1; list.push(y*S+x);}}
+  inIdx=Uint32Array.from(list); NIN=inIdx.length;
+  // prior-austenite grains
+  grains=poisson(98,-70,-70,S+70,S+70,6000).map(p=>({x:p[0],y:p[1],phi:rnd()*Math.PI,px:[]}));
+  grainShade=grains.map(()=>0.70+rnd()*0.08);
+  for(const p of inIdx){const x=p%S+0.5,y=(p/S|0)+0.5; let d1=1e18,d2=1e18,i1=0,i2=0;
+    for(let i=0;i<grains.length;i++){const g=grains[i],dx=g.x-x,dy=g.y-y,d=dx*dx+dy*dy; if(d<d1){d2=d1;i2=i1;d1=d;i1=i;}else if(d<d2){d2=d;i2=i;}}
+    gId[p]=i1; const a=grains[i1],b=grains[i2]; dgb[p]=(d2-d1)/(2*Math.hypot(a.x-b.x,a.y-b.y)); grains[i1].px.push(p);}
+  // pearlite colonies / bainite sheaves: seeds per grain, biased to boundaries
+  cols=[];
+  grains.forEach((g,gi)=>{ g.cols=[]; const A=g.px.length; if(!A) return; const nc=Math.max(2,Math.round(A/1800));
+    for(let k=0;k<500&&g.cols.length<nc;k++){const p=g.px[(rnd()*A)|0]; if(dgb[p]>9&&rnd()>0.12) continue; const x=p%S,y=p/S|0;
+      if(g.cols.some(ci=>{const c=cols[ci];return (c.x-x)**2+(c.y-y)**2<24*24;})) continue;
+      const th=rnd()*Math.PI; cols.push({x,y,c:Math.cos(th),s:Math.sin(th),delay:rnd(),shade:0.9+rnd()*0.1,g:gi}); g.cols.push(cols.length-1);}
+    if(!g.cols.length){const p=g.px[0];const th=rnd()*Math.PI;cols.push({x:p%S,y:p/S|0,c:Math.cos(th),s:Math.sin(th),delay:rnd(),shade:0.95,g:gi});g.cols.push(cols.length-1);}
+  });
+  const keyNod=new Float32Array(NPX), keyFer=new Float32Array(NPX), keyFilm=new Float32Array(NPX), keyM=new Float32Array(NPX);
+  for(const p of inIdx){const x=p%S,y=p/S|0,g=grains[gId[p]]; let best=0,bd=1e18;
+    for(const ci of g.cols){const c=cols[ci],d=(c.x-x)**2+(c.y-y)**2; if(d<bd){bd=d;best=ci;}}
+    colId[p]=best; const c=cols[best], rx=x-c.x, ry=y-c.y, u=rx*c.c+ry*c.s, v=-rx*c.s+ry*c.c;
+    lamU[p]=u+9*(fbm(x/42,y/42,3)-0.5); lamV[p]=v;
+    keyNod[p]=Math.sqrt(bd)+c.delay*45;
+    keyFer[p]=dgb[p]+30*(fbm(x/28,y/28,11)-0.5);
+    keyFilm[p]=dgb[p]+2.0*(fbm(x/9,y/9,5)-0.5);
+  }
+  // proeutectoid ferrite grains nucleate on austenite boundaries
+  const fs=poisson(44,0,0,S,S,9000,(x,y)=>{const p=(y|0)*S+(x|0);return inside[p]&&dgb[p]<2.5;});
+  for(const p of inIdx){const x=p%S,y=p/S|0;let b=0,bd=1e18;for(let i=0;i<fs.length;i++){const d=(fs[i][0]-x)**2+(fs[i][1]-y)**2;if(d<bd){bd=d;b=i;}}ferId[p]=b;}
+  // martensite plates: lenticular, confined to a grain, stopped by earlier plates
+  let nPl=0,covered=0; const target=0.95*NIN; const variants=[0,Math.PI/3,2*Math.PI/3,Math.PI/2];
+  for(let att=0;att<400000&&covered<target;att++){
+    const p=inIdx[(rnd()*NIN)|0]; if(plateId[p]>=0) continue;
+    const x0=p%S,y0=p/S|0,g=gId[p]; const ang=grains[g].phi+variants[(rnd()*4)|0]+(rnd()-0.5)*0.22; const dx=Math.cos(ang),dy=Math.sin(ang);
+    const march=sg=>{let a=0;for(;a<420;a++){const xx=Math.round(x0+sg*dx*(a+1)),yy=Math.round(y0+sg*dy*(a+1)); if(xx<0||yy<0||xx>=S||yy>=S) break; const q=yy*S+xx; if(!inside[q]||gId[q]!==g||plateId[q]>=0) break;} return a;};
+    const a=march(-1),b=march(1),L=a+b+1; plAng[nPl]=ang; if(L<3) {plateId[p]=nPl;plateD[p]=0;covered++;nPl++;continue;}
+    const w0=clamp(0.025*L,0.6,2.8), xs=x0-dx*a, ys=y0-dy*a, xe=x0+dx*b, ye=y0+dy*b;
+    const bx0=Math.max(0,Math.floor(Math.min(xs,xe)-w0-1)),bx1=Math.min(S-1,Math.ceil(Math.max(xs,xe)+w0+1)),by0=Math.max(0,Math.floor(Math.min(ys,ye)-w0-1)),by1=Math.min(S-1,Math.ceil(Math.max(ys,ye)+w0+1));
+    for(let yy=by0;yy<=by1;yy++)for(let xx=bx0;xx<=bx1;xx++){const q=yy*S+xx; if(!inside[q]||gId[q]!==g||plateId[q]>=0) continue;
+      const rx=xx-xs,ry=yy-ys,s=rx*dx+ry*dy; if(s<-0.5||s>L-0.5) continue; const d=Math.abs(-rx*dy+ry*dx),f=(s+0.5)/L,w=Math.max(0.6,w0*Math.sqrt(Math.max(0,1-(2*f-1)**2)));
+      if(d<=w){plateId[q]=nPl;plateD[q]=Math.min(255,(d/w)*255);covered++;}}
+    nPl++;
+  }
+  for(const p of inIdx) keyM[p]=plateId[p]>=0? plateId[p]+hash(p)*0.3 : 1e7+hash(p)*1e6;
+  ordFer=sortBy(keyFer); ordFilm=sortBy(keyFilm); ordNod=sortBy(keyNod); ordMart=sortBy(keyM);
+}
+
+/* ================= Renderer ================= */
+const cv=$('#micro'), ctx=cv.getContext('2d'); const img=ctx.createImageData(S,S), px=img.data;
+const Lum=new Float32Array(NPX), Cls=new Uint8Array(NPX), RK=new Int32Array(NPX);
+// classes: 0 γ, 1 α(pro), 2 Fe3C(pro), 3 pearlite, 4 bainite, 5 martensite, 6 tempered M, 7 spheroidite
+const LIGHT=[[242,205,148],[214,229,242],[150,112,160],[206,228,198],[216,207,238],[242,190,180],[243,214,196],[205,231,233]];
+const DARK =[[128,80,28],[58,90,118],[44,24,54],[34,80,46],[60,48,112],[124,38,34],[126,70,44],[26,86,94]];
+const BF=[0.45,0.42,1,0.72,0.82,0.78,0.8,0.5];
+const swatch=k=>{const a=LIGHT[k],b=DARK[k];return `rgb(${(a[0]*.45+b[0]*.55)|0},${(a[1]*.45+b[1]*.55)|0},${(a[2]*.45+b[2]*.55)|0})`;};
+let colourMode=false;
+const view={T:900, temperP:0, temperT:500, sphP:0, hot:true};
+
+function dotCov(x,y,cell,r,seed){const cx=Math.floor(x/cell),cy=Math.floor(y/cell);let best=1e9;
+  for(let j=-1;j<=1;j++)for(let i=-1;i<=1;i++){const h=hash2(cx+i,cy+j,seed),h2=hash2(cx+i,cy+j,seed+3);const qx=(cx+i+0.15+0.7*h)*cell,qy=(cy+j+0.15+0.7*h2)*cell;const rr=r*(0.7+0.6*hash2(cx+i,cy+j,seed+9));const d=Math.hypot(qx-x,qy-y)-rr;if(d<best)best=d;}
+  return clamp(0.5-best,0,1);}
+
+function render(){
+  const {temperP,temperT,sphP}=view; const cold=view.T<200;
+  const tCell=3.2+(temperT-200)/400*2.2, tR=0.55+(temperT-200)/400*0.9;
+  for(let k=0;k<NIN;k++){const p=inIdx[k],x=p%S,y=p/S|0; let s=st[p],cls=s,l,rk;
+    const ci=colId[p];
+    if(sphP>0 && s>=3 && hash(ci*31+7)<sphP) cls=7;
+    else if(temperP>0 && (s===5||(s===0&&cold)) && hash((plateId[p]>=0?plateId[p]:ci)*13+5)<temperP) cls=6;
+    switch(cls){
+      case 0: l=grainShade[gId[p]]; rk=gId[p];
+        if(cold && plateId[p]>=0){l=0.8;rk=500000+gId[p];} // retained austenite between plates
+        break;
+      case 1: l=0.9+0.07*hash(ferId[p]); rk=100000+ferId[p]; break;
+      case 2: l=0.15; rk=200000; break;
+      case 3:{const lam=lamPx(fT[p]),f=lamU[p]/lam,fr=f-Math.floor(f),d=Math.abs(fr-0.5)*lam,w=Math.max(0.9,0.13*lam),c=clamp(w/2+0.5-d,0,1);
+        l=0.76*cols[ci].shade*(1-c)+0.12*c; rk=300000+ci; break;}
+      case 4:{const pi=plateId[p], pd=plateD[p]/255; if(pi<0){l=0.45;rk=400000;break;}
+        const an=plAng[pi], ca=Math.cos(an), sa=Math.sin(an), al=x*ca+y*sa, ac=-x*sa+y*ca; l=(0.46+0.2*hash(pi*7+1));
+        if(fT[p]>350){ if(pd>0.5&&pd<0.78){const g=al/6+hash(pi*3); if(g-Math.floor(g)<0.6) l=0.15;} }
+        else { const g=(al*0.5+ac*0.866)/3.0; if(pd<0.8&&g-Math.floor(g)<0.32) l=0.16; }
+        if(pd>0.88) l*=0.8; rk=400000+pi; break;}
+      case 5:{const pi=plateId[p], sh=pi>=0?0.34+0.34*hash(pi*7+1):0.45, pd=plateD[p]/255; l=sh*(pd>0.8?0.82:1); rk=500000+gId[p]; break;}
+      case 6:{const pi=plateId[p], sh=pi>=0?0.34+0.34*hash(pi*7+1):0.45; const base=sh*0.55+0.8*0.45; const c=dotCov(x,y,tCell,tR,11); l=base*(1-c)+0.12*c; rk=600000+gId[p]; break;}
+      case 7:{const c=dotCov(x,y,11.5,2.3,23); l=0.9*(1-c)+0.14*c; rk=700000+ferId[p]; break;}
+    }
+    Lum[p]=l; Cls[p]=cls; RK[p]=rk;
+  }
+  // boundaries
+  for(let k=0;k<NIN;k++){const p=inIdx[k],r=p+1,d=p+S,kk=RK[p]; let f=1;
+    if(inside[r]&&RK[r]!==kk) f=Math.min(BF[Cls[p]],BF[Cls[r]]);
+    if(inside[d]&&RK[d]!==kk) f=Math.min(f,BF[Cls[p]],BF[Cls[d]]);
+    if(Cls[p]===2) f=1; Lum[p]*=f;}
+  for(let k=0;k<NIN;k++){const p=inIdx[k],l=Lum[p],o=p*4; let r,g,b;
+    if(colourMode){const c=Cls[p],a=LIGHT[c],z=DARK[c],t=clamp((l-0.12)/0.8,0,1); r=z[0]+(a[0]-z[0])*t; g=z[1]+(a[1]-z[1])*t; b=z[2]+(a[2]-z[2])*t;}
+    else {const t=clamp(l,0,1); r=34+(241-34)*t; g=30+(236-30)*t; b=27+(226-27)*t;}
+    px[o]=r;px[o+1]=g;px[o+2]=b;px[o+3]=255;}
+  ctx.putImageData(img,0,0);
+  // glow ring (incandescence above ~480 °C)
+  const T=view.T; ctx.save(); ctx.beginPath(); ctx.arc(CX,CY,RAD+2,0,Math.PI*2); ctx.lineWidth=7;
+  ctx.strokeStyle=glow(T); if(T>480){ctx.shadowColor=glow(T);ctx.shadowBlur=18;} ctx.stroke(); ctx.restore();
+  // scale bar: 50 µm; FOV 200 µm over 2·RAD px
+  const pxum=2*RAD/200, L=50*pxum, bx=CX-L/2, by=CY+RAD-46;
+  ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(bx-8,by-20,L+16,32);
+  ctx.fillStyle='#fff'; ctx.fillRect(bx,by,L,4);
+  ctx.font='600 13px "JetBrains Mono", monospace'; ctx.textAlign='center'; ctx.fillText('50 µm',CX,by-6);
+}
+function glow(T){ if(T<480) return '#3a3e43';
+  const st=[[480,[80,18,10]],[600,[150,28,10]],[750,[222,82,20]],[900,[255,160,60]],[1050,[255,218,140]]];
+  for(let i=0;i<st.length-1;i++){const a=st[i],b=st[i+1]; if(T<=b[0]){const f=(T-a[0])/(b[0]-a[0]);return `rgb(${a[1].map((v,j)=>Math.round(v+(b[1][j]-v)*f)).join(',')})`;}}
+  return 'rgb(255,218,140)';}
+
+/* ================= Shared UI helpers ================= */
+function bars(barEl,legEl,items){
+  barEl.innerHTML=items.filter(i=>i.v>0.0005).map(i=>`<i style="width:${(i.v*100).toFixed(2)}%;background:${i.c}" title="${i.n}"></i>`).join('');
+  legEl.innerHTML=items.filter(i=>i.v>0.0005||i.always).map(i=>`<span><i class="sw" style="background:${i.c}"></i>${i.n} <em>${pct(i.v)}</em></span>`).join('');
+}
+const fr=(a,b)=>`<span class="fr"><span>${a}</span><span>${b}</span></span>`;
+const SVGNS='http://www.w3.org/2000/svg';
+function el(tag,attrs,parent,text){const e=document.createElementNS(SVGNS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;if(parent)parent.appendChild(e);return e;}
+const PLAY='<svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z"/></svg>', PAUSE='<svg viewBox="0 0 12 12"><path d="M2 1h3v10H2zM7 1h3v10H7z"/></svg>';
+function setPlay(btn,on,label){btn.innerHTML=(on?PAUSE:PLAY)+`<span>${on?'Pause':label}</span>`;}
+
+/* ================= MODE 1: phase diagram ================= */
+const pd=$('#pd'); const PD={ml:52,mr:20,mt:16,mb:46,w:540,h:400,cmax:2.0,tmin:500,tmax:1100};
+const PX=c=>PD.ml+c/PD.cmax*(PD.w-PD.ml-PD.mr), PY=T=>PD.mt+(PD.tmax-T)/(PD.tmax-PD.tmin)*(PD.h-PD.mt-PD.mb);
+let pdDyn={};
+function drawPD(){
+  pd.innerHTML='';
+  const g=el('g',{},pd);
+  const pts=(arr)=>arr.map(([c,T])=>`${PX(c).toFixed(1)},${PY(Math.max(PD.tmin,Math.min(PD.tmax,T))).toFixed(1)}`).join(' ');
+  const a3=A3T.map(r=>[r[0],r[1]]), acm=ACM.filter(r=>r[0]<=PD.cmax).concat([[PD.cmax,Acm(PD.cmax)]]);
+  el('polygon',{points:pts([[0,PD.tmax],[0,912],...a3,...acm,[PD.cmax,PD.tmax]]),fill:'var(--f-gamma)'},g);
+  el('polygon',{points:pts([[0,912],[CA,TE],...a3.slice().reverse()]),fill:'var(--f-two)'},g);
+  el('polygon',{points:pts([[CE,TE],[PD.cmax,TE],...acm.slice().reverse()]),fill:'var(--f-two)'},g);
+  el('polygon',{points:pts([[CA,TE],[PD.cmax,TE],[PD.cmax,PD.tmin],[0.009,PD.tmin]]),fill:'var(--f-low)'},g);
+  for(let T=500;T<=1100;T+=100){el('line',{x1:PD.ml,x2:PD.w-PD.mr,y1:PY(T),y2:PY(T),class:'gl'},g); el('text',{x:PD.ml-6,y:PY(T)+3.5,'text-anchor':'end',class:'tick'},g,T);}
+  el('text',{x:PD.ml-6,y:PY(TE)+3.5,'text-anchor':'end',class:'tick',style:'fill:var(--ink)'},g,'727');
+  el('text',{x:PD.ml-6,y:PY(912)+3.5,'text-anchor':'end',class:'tick',style:'fill:var(--ink)'},g,'912');
+  for(const c of [0,0.5,1.0,1.5,2.0]){el('line',{x1:PX(c),x2:PX(c),y1:PY(PD.tmin),y2:PY(PD.tmin)+4,class:'ax'},g); el('text',{x:PX(c),y:PY(PD.tmin)+16,'text-anchor':'middle',class:'tick'},g,c.toFixed(c?1:0));}
+  el('text',{x:PX(CE),y:PY(PD.tmin)+16,'text-anchor':'middle',class:'tick',style:'fill:var(--ink);font-weight:600'},g,'0.76');
+  el('text',{x:(PD.ml+PD.w-PD.mr)/2,y:PD.h-6,'text-anchor':'middle',class:'tick'},g,'Carbon content, wt %');
+  el('text',{x:12,y:(PD.mt+PD.h-PD.mb)/2,'text-anchor':'middle',class:'tick',transform:`rotate(-90 12 ${(PD.mt+PD.h-PD.mb)/2})`},g,'Temperature, °C');
+  el('rect',{x:PD.ml,y:PD.mt,width:PD.w-PD.ml-PD.mr,height:PD.h-PD.mt-PD.mb,fill:'none',class:'ax'},g);
+  el('polyline',{points:pts([[0,912],...a3.slice(1)]),class:'ln'},g);
+  el('polyline',{points:pts(acm),class:'ln'},g);
+  el('polyline',{points:pts([[0,912],[CA,TE]]),class:'ln'},g);
+  el('polyline',{points:pts([[CA,TE],[0.016,650],[0.009,PD.tmin]]),class:'ln'},g);
+  el('line',{x1:PX(CA),x2:PX(PD.cmax),y1:PY(TE),y2:PY(TE),class:'ln'},g);
+  el('circle',{cx:PX(CE),cy:PY(TE),r:3,fill:'var(--ink)'},g);
+  // labels
+  el('text',{x:PX(0.95),y:PY(1005),class:'rl'},g,'γ  austenite (FCC)');
+  el('text',{x:PX(0.24),y:PY(752),class:'rl'},g,'α + γ');
+  el('text',{x:PX(1.38),y:PY(780),class:'rl'},g,'γ + Fe₃C');
+  el('text',{x:PX(0.9),y:PY(640),class:'rl'},g,'α + Fe₃C');
+  el('text',{x:PX(0.9),y:PY(640)+15,class:'sl'},g,'ferrite + cementite');
+  el('text',{x:PX(0.30),y:PY(845),class:'sl',transform:`rotate(28 ${PX(0.30)} ${PY(845)})`},g,'A3');
+  el('text',{x:PX(1.12),y:PY(860),class:'sl',transform:`rotate(-30 ${PX(1.12)} ${PY(860)})`},g,'Acm');
+  el('text',{x:PX(1.98),y:PY(TE)-5,'text-anchor':'end',class:'sl'},g,'A1 · eutectoid 727 °C');
+  el('text',{x:PX(0.035),y:PY(560),class:'sl'},g,'α');
+  el('text',{x:PX(0.39),y:PY(545),'text-anchor':'middle',class:'sl'},g,'← hypoeutectoid');
+  el('text',{x:PX(1.38),y:PY(545),'text-anchor':'middle',class:'sl'},g,'hypereutectoid →');
+  // dynamic layer
+  const d=el('g',{},pd);
+  pdDyn.vline=el('line',{class:'cline'},d);
+  pdDyn.tie=el('line',{class:'tie'},d);
+  pdDyn.tA=el('circle',{r:4,fill:'var(--panel)',stroke:'var(--accent)','stroke-width':2},d);
+  pdDyn.tB=el('circle',{r:4,fill:'var(--panel)',stroke:'var(--accent)','stroke-width':2},d);
+  pdDyn.lA=el('text',{class:'tick','text-anchor':'middle',style:'fill:var(--accent);font-weight:600'},d);
+  pdDyn.lB=el('text',{class:'tick','text-anchor':'middle',style:'fill:var(--accent);font-weight:600'},d);
+  pdDyn.cur=el('circle',{r:6.5,class:'cur'},d);
+  pdDyn.curL=el('text',{class:'tick',style:'fill:var(--accent);font-weight:600'},d);
+}
+const slow={C:0.40, s:0, playing:false};
+function startT(C){return Math.ceil((C<CE? Math.max(900,A3(C)+60) : Math.max(900,Acm(C)+60))/10)*10;}
+function slowTP(){const s=slow.s,Ts=startT(slow.C);
+  if(s<=0.55) return {T:Ts-(Ts-TE)*(s/0.55),p:0,seg:0};
+  if(s<=0.75) return {T:TE,p:(s-0.55)/0.2,seg:1};
+  return {T:TE-(TE-20)*((s-0.75)/0.25),p:1,seg:2};}
+function classify(C){const e=Math.abs(C-CE)<0.011?'eutectoid':C<CE?'hypoeutectoid':'hypereutectoid';
+  const k=C<0.15?'low-carbon steel':C<=0.30?'mild steel':C<=0.60?'medium-carbon steel':'high-carbon steel'; return [e,k];}
+
+function updateSlow(){
+  const C=slow.C, {T,p,seg}=slowTP(); const eut=Math.abs(C-CE)<0.011, hypo=!eut&&C<CE, hyper=!eut&&C>CE;
+  const Wpe = hypo?(CE-C)/(CE-CA):0, Wfe=hyper?(C-CE)/(CC-CE):0; // proeutectoid at 727+
+  let a=0,gm=1,fe=0, aPro=0,fePro=0,pear=0, stage,cap,math='',tie=null;
+  const Tup= hypo?A3(C):hyper?Acm(C):TE;
+  if(seg===0 && T>Tup+1e-6){ stage='Single-phase austenite (γ)';
+    cap=`FCC iron with all ${fmt(C,2)} %C dissolved interstitially. Austenite can hold up to 2.11 %C, so nothing precipitates. Only the austenite grain boundaries are visible. Phase boundary ${hypo?'A3':'Acm'} is at ${Math.round(Tup)} °C for this composition.`;
+    math=`<div class="eq">Single phase: W<sub>γ</sub> = <span class="res">100 %</span>, composition = C₀ = ${fmt(C,2)} %C</div>`;
+  } else if(seg===0){
+    if(hypo){const Cg=A3inv(T),Ca=alphaB(T); a=(Cg-C)/(Cg-Ca); gm=1-a; aPro=a; tie=[Ca,Cg,'α','γ'];
+      stage='α + γ · proeutectoid ferrite forming';
+      cap=`Below A3, ferrite (BCC) nucleates on the austenite grain boundaries and grows inward. Ferrite holds at most ${fmt(Ca,3)} %C, so it rejects carbon into the remaining austenite, whose carbon rises along A3 (now ${fmt(Cg,2)} %C) towards 0.76 %C.`;
+      math=`<div class="eq">W<sub>α</sub> = ${fr('C<sub>γ</sub> − C₀','C<sub>γ</sub> − C<sub>α</sub>')} = ${fr(`${fmt(Cg,3)} − ${fmt(C,3)}`,`${fmt(Cg,3)} − ${fmt(Ca,3)}`)} = <span class="res">${pct(a)}</span></div><div class="eq">W<sub>γ</sub> = 1 − W<sub>α</sub> = <span class="res">${pct(gm)}</span></div>`;
+    } else {const Cg=AcmInv(T); fe=(C-Cg)/(CC-Cg); gm=1-fe; fePro=fe; tie=[Cg,CC,'γ','Fe₃C'];
+      stage='γ + Fe₃C · proeutectoid cementite forming';
+      cap=`Below Acm, austenite cannot hold all the carbon. Cementite (Fe₃C, 6.67 %C) precipitates as a film along the austenite grain boundaries, and the austenite carbon falls along Acm (now ${fmt(Cg,2)} %C) towards 0.76 %C. These brittle boundary films are why hypereutectoid steels need careful heat treatment.`;
+      math=`<div class="eq">W<sub>Fe₃C</sub> = ${fr('C₀ − C<sub>γ</sub>','6.67 − C<sub>γ</sub>')} = ${fr(`${fmt(C,3)} − ${fmt(Cg,3)}`,`6.67 − ${fmt(Cg,3)}`)} = <span class="res">${pct(fe)}</span></div><div class="eq">W<sub>γ</sub> = <span class="res">${pct(gm)}</span></div>`;}
+  } else if(seg===1){
+    aPro=Wpe; fePro=Wfe; const rest=1-aPro-fePro; pear=rest*p; gm=rest*(1-p);
+    const aP=(CC-CE)/(CC-CA); a=aPro+pear*aP; fe=fePro+pear*(1-aP);
+    stage='Eutectoid reaction at 727 °C · pearlite growing';
+    cap=`The remaining austenite has reached 0.76 %C. It transforms at constant temperature: γ (0.76 %C) → α (0.022 %C) + Fe₃C (6.67 %C). Three phases coexist until all the austenite is used up. Pearlite colonies grow from the grain boundaries as alternating plates, because carbon only needs to diffuse sideways over one lamella spacing.`;
+    tie=[CA,CC,'α','Fe₃C'];
+    math=`<div class="eq">γ<sub>0.76</sub> → α<sub>0.022</sub> + Fe₃C<sub>6.67</sub> &nbsp;·&nbsp; transformed: <span class="res">${pct(p)}</span> of the remaining γ</div><div class="eq">Pearlite is W<sub>α</sub> = ${fr('6.67 − 0.76','6.67 − 0.022')} = <span class="res">${pct(aP)}</span> ferrite + ${pct(1-aP)} Fe₃C</div>`;
+  } else {
+    aPro=Wpe; fePro=Wfe; pear=1-aPro-fePro; gm=0; const Ca=alphaB(T); fe=(C-Ca)/(CC-Ca); a=1-fe; tie=[Ca,CC,'α','Fe₃C'];
+    stage=T>21?'α + Fe₃C · cooling to room temperature':'Final microstructure at 20 °C';
+    cap= hypo?`${pct(aPro)} proeutectoid ferrite (light grains) + ${pct(pear)} pearlite (dark lamellar islands). More carbon gives more pearlite, so the steel is stronger and less ductile. Below 727 °C almost nothing changes, because diffusion is slow and the phases are already near equilibrium.`
+       : hyper?`${pct(pear)} pearlite with ${pct(fePro)} proeutectoid cementite outlining the prior austenite grains. This is the "Fe₃C film" network from the slow-cooled sketch.`
+       :`${pct(pear)} pearlite: every former austenite grain is now colonies of α + Fe₃C lamellae. This is 100 % pearlite, as on the slide.`;
+    math=`<div class="eq">Phases: W<sub>Fe₃C</sub> = ${fr('C₀ − C<sub>α</sub>','6.67 − C<sub>α</sub>')} = ${fr(`${fmt(C,3)} − ${fmt(Ca,3)}`,`6.67 − ${fmt(Ca,3)}`)} = <span class="res">${pct(fe)}</span></div>`+
+      (hypo?`<div class="eq">Microconstituents: W<sub>pearlite</sub> = ${fr('C₀ − 0.022','0.76 − 0.022')} = ${fr(`${fmt(C,3)} − 0.022`,'0.738')} = <span class="res">${pct(pear)}</span></div>`
+       :hyper?`<div class="eq">Microconstituents: W<sub>Fe₃C,pro</sub> = ${fr('C₀ − 0.76','6.67 − 0.76')} = ${fr(`${fmt(C,3)} − 0.76`,'5.91')} = <span class="res">${pct(fePro)}</span></div>`:'');
+  }
+  // readouts
+  $('#sT').textContent=Math.round(T)+' °C';
+  const [e,k]=classify(C); $('#sClass').textContent=`${fmt(C,2)} %C · ${e} · ${k}`;
+  $('#sStage').textContent=stage; $('#sCap').textContent=cap; $('#sMath').innerHTML=math;
+  bars($('#sPhBar'),$('#sPhLeg'),[{n:'γ austenite',v:gm,c:swatch(0)},{n:'α ferrite',v:a,c:swatch(1)},{n:'Fe₃C cementite',v:fe,c:swatch(2)}]);
+  $('#sPhSum').textContent=seg===1&&p>0&&p<1?'3 phases coexist (invariant)':'';
+  bars($('#sMcBar'),$('#sMcLeg'),[{n:'Austenite',v:gm,c:swatch(0)},{n:'Proeutectoid ferrite',v:aPro,c:swatch(1)},{n:'Proeutectoid Fe₃C',v:fePro,c:swatch(2)},{n:'Pearlite',v:pear,c:swatch(3)}]);
+  // diagram dynamics
+  const cy=PY(Math.max(PD.tmin,T)), cx=PX(C);
+  Object.entries({x1:cx,x2:cx,y1:PD.mt,y2:PY(PD.tmin)}).forEach(([k2,v])=>pdDyn.vline.setAttribute(k2,v));
+  pdDyn.cur.setAttribute('cx',cx); pdDyn.cur.setAttribute('cy',cy);
+  pdDyn.curL.setAttribute('x',cx+10); pdDyn.curL.setAttribute('y',cy-9); pdDyn.curL.textContent=T<PD.tmin?`↓ ${Math.round(T)} °C`:`${Math.round(T)} °C`;
+  const vis=!!tie&&T>=PD.tmin; [pdDyn.tie,pdDyn.tA,pdDyn.tB,pdDyn.lA,pdDyn.lB].forEach(n=>n.style.display=vis?'':'none');
+  if(vis){const xa=PX(Math.max(0,tie[0])), xb=PX(Math.min(PD.cmax,tie[1]));
+    pdDyn.tie.setAttribute('x1',xa);pdDyn.tie.setAttribute('x2',xb);pdDyn.tie.setAttribute('y1',cy);pdDyn.tie.setAttribute('y2',cy);
+    pdDyn.tA.setAttribute('cx',xa);pdDyn.tA.setAttribute('cy',cy);pdDyn.tB.setAttribute('cx',xb);pdDyn.tB.setAttribute('cy',cy);
+    pdDyn.tB.style.display=tie[1]>PD.cmax?'none':'';
+    pdDyn.lA.setAttribute('x',Math.max(xa,PD.ml+18));pdDyn.lA.setAttribute('y',cy+17);pdDyn.lA.textContent=`${tie[2]} ${fmt(tie[0],tie[0]<0.1?3:2)}`;
+    pdDyn.lB.setAttribute('x',Math.min(xb,PD.w-PD.mr-30));pdDyn.lB.setAttribute('y',cy+17);pdDyn.lB.textContent=tie[1]>PD.cmax?`→ ${tie[3]} 6.67`:`${tie[3]} ${fmt(tie[1],2)}`;}
+  // specimen
+  st.fill(0);
+  let n=Math.round(aPro*NIN); for(let i=0;i<n;i++) st[ordFer[i]]=1;
+  n=Math.round(fePro*NIN); for(let i=0;i<n;i++) st[ordFilm[i]]=2;
+  n=Math.round(pear*NIN); for(let i=0;i<NIN&&n>0;i++){const q=ordNod[i]; if(st[q]===0){st[q]=3;fT[q]=703;n--;}}
+  view.T=T; view.temperP=0; view.sphP=0;
+  $('#scopeStatus').innerHTML=T>TE+0.5?`In situ at <b>${Math.round(T)} °C</b> (hot stage)`:T>21?`In situ at <b>${Math.round(T)} °C</b>`:`<b>20 °C</b> · polished, 2 % nital etch`;
+  render();
+  $('#scrubSlow').value=Math.round(slow.s*1000);
+}
+
+/* ================= MODE 2: TTT ================= */
+const tt=$('#ttt'); const TD={ml:52,mr:16,mt:16,mb:46,w:540,h:400,lt0:-1,lt1:5,Tmax:800};
+const TXl=lt=>TD.ml+(lt-TD.lt0)/(TD.lt1-TD.lt0)*(TD.w-TD.ml-TD.mr), TX=t=>TXl(Math.log10(Math.max(t,0.1))), TY=T=>TD.mt+(TD.Tmax-T)/TD.Tmax*(TD.h-TD.mt-TD.mb);
+let ttDyn={};
+function drawTTT(){
+  tt.innerHTML=''; const g=el('g',{},tt);
+  for(let T=0;T<=800;T+=100){el('line',{x1:TD.ml,x2:TD.w-TD.mr,y1:TY(T),y2:TY(T),class:'gl'},g); el('text',{x:TD.ml-6,y:TY(T)+3.5,'text-anchor':'end',class:'tick'},g,T);}
+  const lab=['0.1','1','10','10²','10³','10⁴','10⁵'];
+  for(let lt=-1;lt<=5;lt++){el('line',{x1:TXl(lt),x2:TXl(lt),y1:TD.mt,y2:TY(0),class:'gl'},g); el('text',{x:TXl(lt),y:TY(0)+16,'text-anchor':'middle',class:'tick'},g,lab[lt+1]);}
+  el('text',{x:TXl(4.4),y:TY(0)+30,'text-anchor':'middle',class:'tick'},g,'1 h ≈ 3.6×10³ s');
+  el('text',{x:(TD.ml+TD.w-TD.mr)/2-40,y:TD.h-6,'text-anchor':'middle',class:'tick'},g,'Time, s (log scale)');
+  el('text',{x:12,y:(TD.mt+TD.h-TD.mb)/2,'text-anchor':'middle',class:'tick',transform:`rotate(-90 12 ${(TD.mt+TD.h-TD.mb)/2})`},g,'Temperature, °C');
+  el('rect',{x:TD.ml,y:TD.mt,width:TD.w-TD.ml-TD.mr,height:TD.h-TD.mt-TD.mb,fill:'none',class:'ax'},g);
+  // curves
+  const cs=[],c50=[],cf=[];
+  for(let T=726;T>=MS;T-=1){const [n,b]=nB(T); const ts=tttT(T,1),tf=tttT(T,2),t5=Math.pow(Math.log(2)/b,1/n);
+    if(ts<1e5) cs.push([TX(ts),TY(T)]); if(t5<1e5) c50.push([TX(t5),TY(T)]); if(tf<1e5) cf.push([TX(tf),TY(T)]);}
+  const P=a=>a.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' ');
+  // shade transformation band
+  el('polygon',{points:P(cs)+' '+P(cf.slice().reverse()),fill:'var(--f-gamma)'},g);
+  el('polyline',{points:P(cs),class:'ln'},g); el('polyline',{points:P(cf),class:'ln'},g);
+  el('polyline',{points:P(c50),class:'ln','stroke-dasharray':'5 4','stroke-width':1.1},g);
+  el('line',{x1:TD.ml,x2:TD.w-TD.mr,y1:TY(TE),y2:TY(TE),class:'ln','stroke-dasharray':'2 3','stroke-width':1.1},g);
+  const M50=MS-Math.log(2)/KM, M90=MS-Math.log(10)/KM;
+  for(const [T,l] of [[MS,'Ms 220 °C'],[M50,'M50'],[M90,'M90']]){el('line',{x1:TD.ml,x2:TD.w-TD.mr,y1:TY(T),y2:TY(T),class:'ln','stroke-width':T===MS?1.6:1,'stroke-dasharray':T===MS?'':'6 4'},g); el('text',{x:TD.w-TD.mr-4,y:TY(T)-4,'text-anchor':'end',class:'sl'},g,l);}
+  el('text',{x:TD.w-TD.mr-4,y:TY(TE)-5,'text-anchor':'end',class:'sl'},g,'A1 727 °C · austenite stable above');
+  el('text',{x:TXl(-0.85),y:TY(640),class:'rl'},g,'γ');
+  el('text',{x:TXl(-0.85),y:TY(640)+14,class:'sl'},g,'unstable');
+  el('text',{x:TXl(2.2),y:TY(640),class:'rl'},g,'Pearlite');
+  el('text',{x:TXl(2.2),y:TY(640)+14,class:'sl'},g,'coarse ↑ · fine ↓');
+  el('text',{x:TXl(1.6),y:TY(110),class:'rl'},g,'Martensite (+ retained γ)');
+  el('text',{x:TX(tttT(600,1))-4,y:TY(600),'text-anchor':'end',class:'sl'},g,'Ps');
+  el('text',{x:TX(tttT(600,2))+4,y:TY(600),class:'sl'},g,'Pf');
+  const cp=el('clipPath',{id:'tttclip'},el('defs',{},tt)); el('rect',{x:TD.ml,y:TD.mt,width:TD.w-TD.ml-TD.mr,height:TD.h-TD.mt-TD.mb+8},cp);
+  const d=el('g',{'clip-path':'url(#tttclip)'},tt);
+  ttDyn.ghost=el('polyline',{class:'pathghost'},d); ttDyn.path=el('polyline',{class:'path'},d);
+  ttDyn.cur=el('circle',{r:6.5,class:'cur'},d);
+}
+const PRESET={furnace:0.085,air:2.3,oil:45,water:270};
+const ttt={route:'air',R:2.3,u:0,playing:false,sim:null,post:null};
+function runSim(){
+  const tau=680/ttt.R, Tf=t=>20+880*Math.exp(-t/tau), tEnd=tau*Math.log(880/3);
+  const S_=[]; const ev={t:[],ty:[],n:[],T:[]}; const acc=[0,0,0];
+  let t=0,Xd=0,inc=0,Pc=0,Pf=0,M=0,gMs=-1,Tmin=1e9,Hs=0, form=null;
+  S_.push({t:0,T:900,Pc,Pf,M,inc,Hs,form});
+  const push=(ty,d,T)=>{acc[ty]+=d*NIN; if(acc[ty]>=1){const n=Math.floor(acc[ty]); acc[ty]-=n; ev.t.push(t+0); ev.ty.push(ty); ev.n.push(n); ev.T.push(T);}};
+  let guard=0;
+  while(t<tEnd && guard++<200000){
+    const T=Tf(t), slope=Math.abs(Tf(t+1e-4)-T)/1e-4; let dt=Math.max(2e-3,0.004*t); if(slope>0) dt=Math.min(dt,0.5/slope); dt=Math.max(dt,2e-4);
+    const T2=Tf(t+dt), Tm=0.5*(T+T2); form=null;
+    if(Tm<TE && Tm>450 && gMs<0 && Xd<0.99999){const ts=tttT(Tm,1); if(isFinite(ts)){ if(Xd<0.01) inc+=dt/ts;
+      const [n,b]=nB(Tm); const tst=Math.pow(-Math.log(1-Xd)/b,1/n); const Xn=1-Math.exp(-b*Math.pow(tst+dt,n)); const dX=Xn-Xd; Xd=Xn;
+      if(dX>0){ if(Tm>=650)Pc+=dX; else Pf+=dX; Hs+=dX*Hpear(Tm); form='P'; push(0,dX,Tm);} }}
+    if(T2<MS){ if(gMs<0) gMs=1-Xd; Tmin=Math.min(Tmin,T2); const Mn=gMs*(1-Math.exp(-KM*(MS-Tmin))); const dM=Mn-M; if(dM>0){M=Mn; Hs+=dM*HMART; form='M'; push(2,dM,T2);} }
+    t+=dt; S_.push({t,T:T2,Pc,Pf,M,inc,Hs,form});
+  }
+  ttt.sim={S:S_,ev,tEnd,Tf};
+}
+const uToT=u=>u<=0?0:Math.pow(10,-1+u*(Math.log10(ttt.sim.tEnd)+1));
+function sampleAt(t){const a=ttt.sim.S; let lo=0,hi=a.length-1; while(hi-lo>1){const m=(lo+hi)>>1; if(a[m].t<=t) lo=m; else hi=m;} return a[lo];}
+function fmtTime(t){ if(t<1) return t.toFixed(2)+' s'; if(t<60) return t.toFixed(1)+' s'; if(t<3600) return (t/60).toFixed(1)+' min'; return (t/3600).toFixed(1)+' h';}
+
+function updatePathSVG(){const S_=ttt.sim.S; const pts=[]; let lastX=-1;
+  for(const s of S_){ if(s.t<0.1) continue; const x=TX(s.t); if(x-lastX<0.8) continue; lastX=x; pts.push(x.toFixed(1)+','+TY(s.T).toFixed(1)); }
+  pts.unshift(TX(0.1).toFixed(1)+','+TY(ttt.sim.Tf(0.1)).toFixed(1));
+  ttDyn.ghost.setAttribute('points',pts.join(' ')); ttDyn.all=pts;}
+function updateTTT(){
+  const sim=ttt.sim, t=uToT(ttt.u), s=sampleAt(t), done=ttt.u>=1; const T=done?20:s.T;
+  // path progress
+  const xNow=TX(Math.max(t,0.1)); ttDyn.path.setAttribute('points',ttDyn.all.filter(q=>parseFloat(q)<=xNow+0.01).join(' '));
+  ttDyn.cur.setAttribute('cx',xNow); ttDyn.cur.setAttribute('cy',TY(T));
+  // specimen from events
+  st.fill(0); let pN=0,pM=0; const ev=sim.ev;
+  for(let i=0;i<ev.t.length&&ev.t[i]<=t+1e-12;i++){let n=ev.n[i]; const ty=ev.ty[i], ord=ty===0?ordNod:ordMart, sv=ty===0?3:5;
+    let ptr=ty===0?pN:pM; while(n>0&&ptr<NIN){const q=ord[ptr++]; if(st[q]===0){st[q]=sv;fT[q]=ev.T[i];n--;}}
+    if(ty===0)pN=ptr; else pM=ptr;}
+  // post-treatment
+  const post=ttt.post; view.temperP=post&&post.kind==='temper'?post.p:0; view.temperT=post?post.T:500; view.sphP=post&&post.kind==='sph'?post.p:0;
+  view.T=post&&post.p<1?(post.kind==='sph'?700:post.T):T;
+  // fractions
+  const RA=Math.max(0,1-s.Pc-s.Pf-s.M); let Mf=s.M, TM=0, SP=0, RAf=RA, Pc=s.Pc, Pf=s.Pf;
+  let H=s.Hs+RA*HRA;
+  if(view.temperP>0){const q=view.temperP; TM=(Mf+RAf)*q; H=H-(Mf*HMART+RAf*HRA)*q+(Mf+RAf)*q*Htemp(view.temperT); Mf*=1-q; RAf*=1-q;}
+  if(view.sphP>0){const q=view.sphP; SP=(Pc+Pf+Mf+TM)*q; H=H*(1-q)+HSPH*q; Pc*=1-q;Pf*=1-q;Mf*=1-q;TM*=1-q;}
+  const cold=T<200;
+  bars($('#tBar'),$('#tLeg'),[{n:cold?'Retained austenite':'Austenite',v:RAf,c:swatch(0)},{n:'Coarse pearlite',v:Pc,c:swatch(3)},{n:'Fine pearlite',v:Pf,c:'rgb(70,128,82)'},{n:'Martensite',v:Mf,c:swatch(5)},{n:'Tempered martensite',v:TM,c:swatch(6)},{n:'Spheroidite',v:SP,c:swatch(7)}]);
+  $('#tT').textContent=Math.round(view.T)+' °C';
+  const rate=`${fmtRate(ttt.R)} at 700 °C`;
+  $('#tTime').textContent=post?`${post.kind==='sph'?'700 °C · 30 h':post.T+' °C · 1 h'} · ${Math.round(post.p*100)} %`:`t = ${fmtTime(done?sim.tEnd:t)} · ${rate}`;
+  $('#tInc').textContent=(s.Pc+s.Pf)<0.01&&T<TE&&T>MS&&!post?`incubation used ${Math.min(100,s.inc*100).toFixed(0)} %`:'';
+  // stage text
+  let stage,cap; const fracs=[['coarse pearlite',Pc],['fine pearlite',Pf],['martensite',Mf],['tempered martensite',TM],['spheroidite',SP],[cold?'retained austenite':'austenite',RAf]].filter(x=>x[1]>0.004).map(x=>`${pct(x[1])} ${x[0]}`).join(' + ');
+  if(post){ if(post.kind==='temper'){stage=`Tempering at ${post.T} °C`;
+      cap=(s.M>0.01?`Carbon trapped in the martensite comes out as fine Fe₃C particles, and the BCT lattice relaxes to ferrite. Hardness falls, but toughness rises a lot. Retained austenite also decomposes. Higher temperature gives coarser carbides and a softer steel. `:`There is little martensite to temper, so pearlite is almost unchanged at this temperature. Tempering only does useful work on a quenched structure. `)+(post.p>=1?`Result: ${fracs}.`:'');}
+    else {stage='Spheroidising at 700 °C for 30 h';
+      cap=`Just below A1, the cementite reduces its interface area by balling up into spheres in a ferrite matrix. This is the softest, most ductile and most machinable condition of the steel. `+(post.p>=1?`Result: ${fracs}.`:'');}
+  } else if(t===0||T>=TE){stage='Austenite (γ), stable'; cap='Fully austenitic at 900 °C. Above A1 (727 °C) austenite is the equilibrium phase, so nothing transforms however long you wait.';}
+  else if(done){stage='Final microstructure at 20 °C'; cap=fracs+'. '+(RA>0.02&&s.M>0.2?`Some austenite is retained because Mf for 0.76 %C lies below room temperature. `:'')+(s.M>0.3?'Martensite makes it hard but brittle, so temper it next.':'');}
+  else if(s.form==='M'||T<MS&&s.M>0.001){stage='Martensite forming (diffusionless)'; cap=`Below Ms = 220 °C the remaining austenite shears into martensite plates. There is no time for carbon to diffuse, so it is trapped in a strained BCT lattice. Each plate forms almost instantly, and new plates appear only as the temperature keeps falling. Later plates are smaller because earlier ones divide the grains.`;}
+  else if(s.form==='P'){const sp=lamPx(T); stage=`Pearlite forming at ${Math.round(T)} °C`; cap=`Carbon diffuses sideways to build alternating α and Fe₃C plates. Larger undercooling below 727 °C means more nuclei and shorter diffusion distances, so the pearlite is ${T>=650?'coarse':'fine'} (spacing ∝ 1/ΔT, here ΔT = ${Math.round(TE-T)} °C). Finer pearlite is harder.`;}
+  else if(T<TE&&T>MS){stage='Austenite, undercooled'; cap=`Austenite is now unstable but needs time to nucleate. The cooling path has to reach the Ps curve before transformation starts. Cool fast enough to pass the nose (≈ 540 °C) before reaching Ps and the austenite survives to Ms.`;}
+  else if(T<=MS&&s.M<0.001){stage='Undercooled austenite'; cap='';}
+  else {stage='Holding'; cap=fracs;}
+  $('#tStage').textContent=stage; $('#tCap').textContent=cap;
+  const showH=done||post; $('#tHB').textContent=showH?`≈ HB ${Math.round(H/10)*10}`:'shown once cooled';
+  $('#tGauge').style.left=showH?`${clamp((H-100)/700,0,1)*100}%`:'0%'; $('#tGauge').style.opacity=showH?1:0;
+  $('#scopeStatus').innerHTML=post&&post.p<1?`In situ at <b>${Math.round(view.T)} °C</b>`:view.T>21.5?`In situ at <b>${Math.round(view.T)} °C</b>${view.T>TE?' (hot stage)':''}`:`<b>20 °C</b> · polished, 2 % nital etch`;
+  ['#btnTemper','#btnSph'].forEach(b=>$(b).disabled=!done||!!post&&post.p<1);
+  $('#btnUndo').disabled=!post;
+  render();
+  $('#scrubTTT').value=Math.round(ttt.u*1000);
+}
+function fmtRate(R){return (R<0.1?R.toFixed(3):R<1?R.toFixed(2):R<10?R.toFixed(1):Math.round(R))+' °C/s';}
+function setRoute(r){ttt.route=r; ttt.post=null; if(PRESET[r]){ttt.R=PRESET[r]; $('#rate').value=Math.log10(ttt.R);}
+  document.querySelectorAll('#routes .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r===r));
+  $('#rateout').textContent=fmtRate(ttt.R);
+  runSim(); updatePathSVG(); ttt.u=0; stopAll(); updateTTT();}
+
+/* ================= Playback ================= */
+let mode='slow', raf=0, last=0;
+function stopAll(){slow.playing=false; ttt.playing=false; setPlay($('#playSlow'),false,'Cool'); setPlay($('#playTTT'),false,'Cool');}
+function loop(ts){const dt=Math.min(0.05,(ts-last)/1000||0); last=ts; let again=false;
+  if(mode==='slow'&&slow.playing){ const seg=slowTP().seg; slow.s=Math.min(1,slow.s+dt/(seg===1?3.2:seg===0?6:4)*(seg===1?0.2:seg===0?0.55:0.25)); updateSlow(); if(slow.s>=1) stopAll(); else again=true;}
+  if(mode==='ttt'&&ttt.playing){ ttt.u=Math.min(1,ttt.u+dt/9); updateTTT(); if(ttt.u>=1) stopAll(); else again=true;}
+  if(mode==='ttt'&&ttt.post&&ttt.post.p<1){ ttt.post.p=Math.min(1,ttt.post.p+dt/2.2); updateTTT(); again=true;}
+  raf=again?requestAnimationFrame(loop):0;}
+function kick(){ if(!raf){last=performance.now(); raf=requestAnimationFrame(loop);} }
+
+/* ================= Wiring ================= */
+function initUI(){
+  $('#c0').addEventListener('input',e=>{slow.C=+e.target.value; $('#c0out').textContent=fmt(slow.C,2)+' wt%'; markChips(); updateSlow();});
+  function setC(c){slow.C=Math.round(clamp(c,0.05,1.6)*100)/100; $('#c0').value=slow.C; $('#c0out').textContent=fmt(slow.C,2)+' wt%'; markChips(); updateSlow();}
+  function markChips(){document.querySelectorAll('#cchips .chip').forEach(b=>b.setAttribute('aria-pressed',Math.abs(+b.dataset.c-slow.C)<0.005));}
+  document.querySelectorAll('#cchips .chip').forEach(b=>b.addEventListener('click',()=>setC(+b.dataset.c)));
+  markChips();
+  let drag=false; const toC=ev=>{const r=pd.getBoundingClientRect(); const x=(ev.clientX-r.left)/r.width*PD.w; return (x-PD.ml)/(PD.w-PD.ml-PD.mr)*PD.cmax;};
+  pd.addEventListener('pointerdown',ev=>{drag=true; pd.setPointerCapture(ev.pointerId); setC(toC(ev));});
+  pd.addEventListener('pointermove',ev=>{if(drag) setC(toC(ev));});
+  pd.addEventListener('pointerup',()=>drag=false); pd.addEventListener('pointercancel',()=>drag=false);
+  $('#scrubSlow').addEventListener('input',e=>{slow.playing=false; setPlay($('#playSlow'),false,'Cool'); slow.s=+e.target.value/1000; updateSlow();});
+  $('#playSlow').addEventListener('click',()=>{ if(slow.playing){stopAll();return;} if(slow.s>=1) slow.s=0; slow.playing=true; setPlay($('#playSlow'),true); kick();});
+  // TTT
+  document.querySelectorAll('#routes .chip').forEach(b=>b.addEventListener('click',()=>setRoute(b.dataset.r)));
+  $('#rate').addEventListener('input',e=>{ttt.R=Math.pow(10,+e.target.value); $('#rateout').textContent=fmtRate(ttt.R); ttt.route='custom'; ttt.post=null;
+    document.querySelectorAll('#routes .chip').forEach(b=>b.setAttribute('aria-pressed','false'));
+    runSim(); updatePathSVG(); ttt.u=1; stopAll(); updateTTT();});
+  $('#scrubTTT').addEventListener('input',e=>{ttt.playing=false; setPlay($('#playTTT'),false,'Cool'); ttt.u=+e.target.value/1000; if(ttt.u<1) ttt.post=null; updateTTT();});
+  $('#playTTT').addEventListener('click',()=>{ if(ttt.playing){stopAll();return;} if(ttt.u>=1){ttt.u=0; ttt.post=null;} ttt.playing=true; setPlay($('#playTTT'),true); kick();});
+  $('#btnTemper').addEventListener('click',()=>{ttt.post={kind:'temper',T:+$('#temperT').value,p:0}; kick();});
+  $('#btnSph').addEventListener('click',()=>{ttt.post={kind:'sph',T:700,p:0}; kick();});
+  $('#btnUndo').addEventListener('click',()=>{ttt.post=null; updateTTT();});
+  $('#temperT').addEventListener('change',()=>{ if(ttt.post&&ttt.post.kind==='temper'){ttt.post={kind:'temper',T:+$('#temperT').value,p:0}; kick();}});
+  // modes
+  const tabs={slow:$('#tab-slow'),ttt:$('#tab-ttt')};
+  function setMode(m){mode=m; stopAll(); for(const k in tabs) tabs[k].setAttribute('aria-selected',k===m);
+    $('#panel-slow').hidden=m!=='slow'; $('#panel-ttt').hidden=m!=='ttt'; $('#ro-slow').hidden=m!=='slow'; $('#ro-ttt').hidden=m!=='ttt';
+    try{localStorage.setItem('sml-mode',m);}catch(e){}
+    if(m==='slow') updateSlow(); else updateTTT();}
+  tabs.slow.addEventListener('click',()=>setMode('slow')); tabs.ttt.addEventListener('click',()=>setMode('ttt'));
+  const setRM=c=>{colourMode=c; $('#mEtch').setAttribute('aria-pressed',!c); $('#mCol').setAttribute('aria-pressed',c); render();};
+  $('#mEtch').addEventListener('click',()=>setRM(false)); $('#mCol').addEventListener('click',()=>setRM(true));
+  return setMode;
+}
+
+// boot
+drawPD(); drawTTT();
+setTimeout(()=>{
+  buildSpecimen();
+  $('#loading').hidden=true;
+  const setMode=initUI();
+  // TTT default: air cool, fully cooled
+  ttt.R=PRESET.air; runSim(); updatePathSVG(); ttt.u=1;
+  document.querySelectorAll('#routes .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.r==='air'));
+  // slow default: 0.40 %C partway through α+γ so the first view shows something forming
+  slow.s=0.42;
+  let m='slow'; try{m=localStorage.getItem('sml-mode')||'slow';}catch(e){}
+  setMode(m==='ttt'?'ttt':'slow');
+},30);
+})();
+</script>
+
+</body></html>
