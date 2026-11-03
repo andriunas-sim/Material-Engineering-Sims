@@ -54,6 +54,12 @@ input[type=range]{width:100%;accent-color:var(--anode)}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
 .chip small{font-family:var(--mono);font-size:11px;opacity:.75;margin-left:4px}
 .ex .chip{border-style:dashed}
+.chip.part{display:inline-grid;gap:2px;padding:7px 10px 8px;min-width:0}
+.chip.part b{font-weight:600}
+.chip.part small{margin:0}
+.chip.part[aria-pressed="false"]{color:var(--muted);border-style:dashed;text-decoration:line-through;text-decoration-color:var(--anode)}
+.parts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:520px){.parts{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .ex .chip[aria-pressed="true"]{border-style:solid}
 .selects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .selects label{display:grid;gap:4px}
@@ -131,12 +137,13 @@ details.notes code{font-family:var(--mono);font-size:12.5px}
   <header>
     <div class="eyebrow">INU1126 Engineering Materials · Types of corrosion</div>
     <h1>Corrosion Lab</h1>
-    <p class="lede">Five forms of aqueous corrosion. Each tab shows where the anode and cathode are, how fast the metal goes (Faraday's law), what makes it worse, and how to limit it.</p>
+    <p class="lede">The idealised corrosion cell, then five forms of aqueous corrosion. Each tab shows where the anode and cathode are, how fast the metal goes (Faraday's law), what makes it worse, and how to limit it.</p>
   </header>
 
   <nav class="tabs" role="tablist" aria-label="Type of corrosion">
-    <button class="tab" role="tab" id="tab-uniform" data-m="uniform" aria-selected="true">Uniform<small>predictable</small></button>
-    <button class="tab" role="tab" id="tab-galvanic" data-m="galvanic" aria-selected="false">Galvanic<small>two metals</small></button>
+    <button class="tab" role="tab" id="tab-cell" data-m="cell" aria-selected="true">Corrosion cell<small>idealised</small></button>
+    <button class="tab" role="tab" id="tab-uniform" data-m="uniform" aria-selected="false">Uniform<small>predictable</small></button>
+    <button class="tab" role="tab" id="tab-galvanic" data-m="galvanic" aria-selected="false">Galvanic<small>a real joint</small></button>
     <button class="tab" role="tab" id="tab-pitting" data-m="pitting" aria-selected="false">Pitting<small>hard to spot</small></button>
     <button class="tab" role="tab" id="tab-crevice" data-m="crevice" aria-selected="false">Crevice<small>no oxygen inside</small></button>
     <button class="tab" role="tab" id="tab-flow" data-m="flow" aria-selected="false">Flow<small>erosion &amp; cavitation</small></button>
@@ -153,7 +160,7 @@ details.notes code{font-family:var(--mono);font-size:12.5px}
       </div>
 
       <!-- ============ UNIFORM ============ -->
-      <div id="panel-uniform" class="col" role="tabpanel" aria-labelledby="tab-uniform">
+      <div id="panel-uniform" class="col" role="tabpanel" aria-labelledby="tab-uniform" hidden>
         <div class="card ctl">
           <div class="group"><div class="lbl">Example</div>
             <div class="row ex" id="uEx">
@@ -173,28 +180,28 @@ details.notes code{font-family:var(--mono);font-size:12.5px}
           <p class="hint">Click or drag on the chart to move through time.</p></div>
       </div>
 
-      <!-- ============ GALVANIC ============ -->
-      <div id="panel-galvanic" class="col" role="tabpanel" aria-labelledby="tab-galvanic" hidden>
+      <!-- ============ CORROSION CELL (idealised) ============ -->
+      <div id="panel-cell" class="col" role="tabpanel" aria-labelledby="tab-cell" hidden>
         <div class="card ctl">
           <div class="group"><div class="lbl">Example</div>
-            <div class="row ex" id="gEx">
-              <button class="chip" data-x="alarm">Iron nails in copper sheet <small>HMS Alarm</small></button>
-              <button class="chip" data-x="cp">Zinc anode on a steel hull <small>slide 8</small></button>
+            <div class="row ex" id="kEx">
+              <button class="chip" data-x="znfe">Zinc and iron <small>slide 4</small></button>
+              <button class="chip" data-x="fecu">Iron and copper</button>
             </div></div>
           <div class="selects">
-            <label><span class="lbl">Left electrode (10 cm²)</span><select id="mL"></select></label>
-            <label><span class="lbl">Right electrode</span><select id="mR"></select></label>
+            <label><span class="lbl">Left electrode</span><select id="kL"></select></label>
+            <label><span class="lbl">Right electrode</span><select id="kR"></select></label>
           </div>
-          <div class="slider"><label class="lbl" for="aR">Right electrode area</label><input type="range" id="aR" min="-1" max="3" step="0.01" value="1"><output id="aRout">10 cm²</output></div>
-          <div class="group"><div class="lbl">Limit it</div>
-            <div class="row" id="gPost">
-              <button class="chip" data-q="none">As built</button>
-              <button class="chip" data-q="washer">Insulate the joint</button>
+          <div class="group"><div class="lbl">The four parts of a corrosion cell (click to remove)</div>
+            <div class="parts" id="kParts">
+              <button class="chip part" data-p="anode"><b>Anode</b><small id="kpAn">zinc</small></button>
+              <button class="chip part" data-p="cathode"><b>Cathode</b><small id="kpCa">iron</small></button>
+              <button class="chip part" data-p="wire"><b>Metallic path</b><small>wire</small></button>
+              <button class="chip part" data-p="elec"><b>Electrolyte</b><small>seawater</small></button>
             </div></div>
-          <p class="hint" style="margin:0">Seawater, aerated. The slide's other two fixes are the metal choice (pick two close together in the series) and the area slider (make the anode large compared with the cathode).</p>
         </div>
         <div class="card">
-          <svg class="diagram" id="dG" viewBox="0 0 540 380" role="group" aria-label="Galvanic series in seawater"></svg>
+          <svg class="diagram" id="dS" viewBox="0 0 540 380" role="group" aria-label="Galvanic series in seawater"></svg>
           <div class="row" style="justify-content:space-between;margin-top:6px">
             <p class="hint" style="margin:0">Click a metal to put it on the <b id="slotName">left</b> electrode. The more active one becomes the anode.</p>
             <div class="seg" role="group" aria-label="Clicking sets">
@@ -202,6 +209,36 @@ details.notes code{font-family:var(--mono);font-size:12.5px}
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- ============ GALVANIC (realistic joint) ============ -->
+      <div id="panel-galvanic" class="col" role="tabpanel" aria-labelledby="tab-galvanic" hidden>
+        <div class="card ctl">
+          <div class="group"><div class="lbl">Example</div>
+            <div class="row ex" id="gEx">
+              <button class="chip" data-x="alarm">Iron nails in copper sheathing <small>HMS Alarm</small></button>
+              <button class="chip" data-x="cp">Zinc anode on a steel hull <small>slide 8</small></button>
+            </div></div>
+          <div class="selects">
+            <label><span class="lbl">Left metal</span><select id="gL"></select></label>
+            <label><span class="lbl">Right metal</span><select id="gR"></select></label>
+          </div>
+          <div class="group"><div class="lbl">How the joint is wetted</div>
+            <div class="row" id="gEnv">
+              <button class="chip" data-e="imm">Immersed in seawater</button>
+              <button class="chip" data-e="spray">Sea-spray film</button>
+              <button class="chip" data-e="rain">Rain film</button>
+            </div></div>
+          <div class="slider"><label class="lbl" for="gWL">Left metal width</label><input type="range" id="gWL" min="-0.7" max="2" step="0.01" value="0.699"><output id="gWLout">5 cm</output></div>
+          <div class="slider"><label class="lbl" for="gWR">Right metal width</label><input type="range" id="gWR" min="-0.7" max="2" step="0.01" value="0.699"><output id="gWRout">5 cm</output></div>
+          <div class="group"><div class="lbl">Limit it</div>
+            <div class="row" id="gPost">
+              <button class="chip" data-q="none">As built</button>
+              <button class="chip" data-q="washer">Insulate the joint</button>
+            </div></div>
+        </div>
+        <div class="card"><svg class="diagram" id="dG" viewBox="0 0 540 340" role="img" aria-label="Corrosion rate against distance from the joint"></svg>
+          <p class="hint">Corrosion rate along the surface, either side of the joint. Rate axis is logarithmic. The same strip of surface is drawn in the view.</p></div>
       </div>
 
       <!-- ============ PITTING ============ -->
@@ -291,10 +328,17 @@ details.notes code{font-family:var(--mono);font-size:12.5px}
       <li>Rebar: the slide 17 calculation with the same constants, worked without intermediate rounding (5.93 years, 2,166 days; the slide's 2,162 days comes from rounding the moles to 4.84). Real rebar corrosion is often localised (chloride pitting), which is worse than this.</li>
       <li>Rust is drawn at 3× the volume of the steel it came from (real rust is 2–6×). That expansion is what cracks the concrete cover.</li>
     </ul>
-    <h3>Galvanic</h3>
+    <h3>Corrosion cell (idealised)</h3>
     <ul>
-      <li>Potentials are typical galvanic-series values in flowing seawater (V vs saturated calomel electrode). The cell is a circuit obeying Ohm's law: <code>I = ΔE / (R_electrolyte + R_anode + R_cathode)</code>, with <code>R_electrolyte = 20 Ω·cm × 0.5 cm⁻¹</code>, <code>R_anode = 1 kΩ·cm² / A_anode</code> and <code>R_cathode = 10 kΩ·cm² / A_cathode</code> for oxygen reduction.</li>
-      <li>Rate from Faraday's law, <code>CR [mm/yr] = 3.27×10⁻³ · i [µA/cm²] · M / (n·ρ)</code>, plus the anode's own corrosion. The cathode's own corrosion is suppressed by <code>exp(−i_c / 3 µA·cm⁻²)</code>. Each electrode is a 2 mm plate; when 1 mm has gone from each face it is used up and the cell stops.</li>
+      <li>Two separate 10 cm² plates in aerated seawater, joined by a wire. Potentials are typical galvanic-series values in flowing seawater (V vs saturated calomel electrode); slide 4's 0.323 V is the standard-potential gap for zinc and iron, each in a 1 M solution of its own ions.</li>
+      <li>The cell obeys Ohm's law: <code>I = ΔE / (R_water + R_anode + R_cathode)</code>, with <code>R_water = 10 Ω</code>, <code>R_anode = 1 kΩ·cm² / A</code> and <code>R_cathode = 10 kΩ·cm² / A</code> for oxygen reduction. Rate from Faraday's law, <code>CR [mm/yr] = 3.27×10⁻³ · i [µA/cm²] · M / (n·ρ)</code>, plus the anode's own corrosion. Each plate is 2 mm thick; when 1 mm has gone from each face it is used up and the cell stops.</li>
+    </ul>
+    <h3>Galvanic (a real joint)</h3>
+    <ul>
+      <li>The two metals meet at a joint and are wetted by water of depth δ and resistivity ρ. The ionic current can only travel about <code>λ = √(r·δ/ρ)</code> along the surface before it has all crossed into the metal, where r is the reaction resistance (1 kΩ·cm² anodic, 10 kΩ·cm² cathodic). This is the standard thin-layer (transmission-line) model.</li>
+      <li>Water used: immersed in seawater (ρ = 20 Ω·cm, effective δ = 2 cm, always wet); sea-spray film (ρ = 20 Ω·cm, δ = 0.1 mm, wet 50 % of the time); rain film (ρ = 20 kΩ·cm, δ = 0.1 mm, wet 30 % of the time).</li>
+      <li>Current per cm of joint: <code>ΔE / (√(r_a ρ/δ)·coth(L_a/λ_a) + √(r_c ρ/δ)·coth(L_c/λ_c))</code>, where L is the width of each metal. The local current density falls off as cosh((L − x)/λ) from the joint. The cathode metal's own corrosion is suppressed by <code>exp(−i_c / 3 µA·cm⁻²)</code>.</li>
+      <li>Sheet thickness 2 mm; the depth in the cross-section is exaggerated.</li>
     </ul>
     <h3>Pitting</h3>
     <ul>
@@ -500,34 +544,37 @@ function updUniform(){const u=UNI, k=uniCalc();
 }
 const MU={key:'uniform',get t(){return UNI.t;},set t(v){UNI.t=v;},tMax:()=>UNI.ex==='plate'?40:10,toU(t){return t/this.tMax();},fromU(u){return u*this.tMax();},label:t=>'year '+sig(t,t<10?2:3),dur:10,upd:updUniform,draw:drawUniform,anim:true};
 
-/* ===================================================================== GALVANIC */
+/* ===================================================================== METALS (shared by the cell and the joint) */
 const F=96485, YEAR=3.156e7;
 const METALS=[
  {id:'mg',name:'Magnesium',E:-1.615,lo:-1.63,hi:-1.60,M:24.31,n:2,rho:1.74,free:0.5,col:'#cdcfc6',prod:'#ecece4',ion:'Mg²⁺',rx:'Mg → Mg²⁺ + 2e⁻'},
  {id:'zn',name:'Zinc',E:-1.005,lo:-1.03,hi:-0.98,M:65.38,n:2,rho:7.13,free:0.03,col:'#a5b2b9',prod:'#eceee6',ion:'Zn²⁺',rx:'Zn → Zn²⁺ + 2e⁻'},
  {id:'al',name:'Aluminium alloy',E:-0.87,lo:-1.00,hi:-0.76,M:26.98,n:3,rho:2.70,free:0.01,col:'#c3c8cb',prod:'#efefe9',ion:'Al³⁺',rx:'Al → Al³⁺ + 3e⁻'},
- {id:'fe',name:'Mild steel',E:-0.65,lo:-0.72,hi:-0.60,M:55.85,n:2,rho:7.87,free:0.12,col:'#6f777c',prod:'#ad5520',ion:'Fe²⁺',rx:'Fe → Fe²⁺ + 2e⁻'},
+ {id:'fe',name:'Mild steel',E:-0.65,lo:-0.72,hi:-0.60,M:55.85,n:2,rho:7.87,free:0.12,col:'#6f777c',prod:'#7b3a16',ion:'Fe²⁺',rx:'Fe → Fe²⁺ + 2e⁻'},
  {id:'cu',name:'Copper',E:-0.33,lo:-0.36,hi:-0.30,M:63.55,n:2,rho:8.96,free:0.03,col:'#c0703f',prod:'#4f9a7c',ion:'Cu²⁺',rx:'Cu → Cu²⁺ + 2e⁻'},
  {id:'ss',name:'Stainless steel 316',E:-0.05,lo:-0.10,hi:0.00,M:55.9,n:2,rho:8.0,free:0.001,col:'#d5dce0',prod:'#ad5520',ion:'Fe²⁺',rx:'Fe → Fe²⁺ + 2e⁻'},
 ];
 const MI=Object.fromEntries(METALS.map(m=>[m.id,m]));
 const R_SOL=20*0.5, R_A=1000, R_C=1e4, I_PROT=3;
-const GSC={alarm:{L:'fe',R:'cu',AR:1000},cp:{L:'zn',R:'fe',AR:100}};
-const GAL={L:'fe',R:'cu',AR:1000,post:'none',t:0.2,slot:'L'};
 const kFar=m=>3.27e-3*m.M/(m.n*m.rho);
+const CATH='2H₂O + O₂ + 4e⁻ → 4OH⁻';
+
+/* ===================================================================== CORROSION CELL (idealised) */
+const KSC={znfe:{L:'zn',R:'fe'},fecu:{L:'fe',R:'cu'}};
+const CEL={L:'zn',R:'fe',has:{anode:true,cathode:true,wire:true,elec:true},t:1,slot:'L'};
 function cell(s,gone={}){
   const r={}, mL=MI[s.L], mR=MI[s.R];
   r.same=s.L===s.R; r.anSide=mL.E<=mR.E?'L':'R'; r.caSide=r.anSide==='L'?'R':'L';
-  r.an=r.anSide==='L'?mL:mR; r.ca=r.caSide==='L'?mL:mR;
-  const area={L:10,R:s.AR}; r.Aa=area[r.anSide]; r.Ac=area[r.caSide];
+  r.an=r.anSide==='L'?mL:mR; r.ca=r.caSide==='L'?mL:mR; r.A=10;
   r.dE=r.same?0:r.ca.E-r.an.E; r.gone=gone;
-  r.presAn=gone[r.anSide]==null; r.presCa=gone[r.caSide]==null; r.pres={[r.anSide]:r.presAn,[r.caSide]:r.presCa};
-  r.wire=s.post!=='washer';
-  r.Ra=R_A/r.Aa; r.Rc=R_C/r.Ac; r.R=R_SOL+r.Ra+r.Rc;
-  r.live=r.presAn&&r.presCa&&r.wire&&!r.same;
-  r.I=r.live?r.dE/r.R:0; r.iA=r.I*1e6/r.Aa; r.iC=r.I*1e6/r.Ac;
+  r.user={[r.anSide]:s.has.anode,[r.caSide]:s.has.cathode};
+  r.presAn=s.has.anode&&gone[r.anSide]==null; r.presCa=s.has.cathode&&gone[r.caSide]==null; r.pres={[r.anSide]:r.presAn,[r.caSide]:r.presCa};
+  r.wire=s.has.wire; r.elec=s.has.elec;
+  r.Ra=R_A/r.A; r.Rc=R_C/r.A; r.R=R_SOL+r.Ra+r.Rc;
+  r.live=r.elec&&r.presAn&&r.presCa&&r.wire&&!r.same;
+  r.I=r.live?r.dE/r.R:0; r.iA=r.I*1e6/r.A; r.iC=r.iA;
   r.galv=r.iA*kFar(r.an);
-  r.freeA=r.presAn?r.an.free:0; r.freeC0=r.presCa?r.ca.free:0;
+  r.freeA=r.elec&&r.presAn?r.an.free:0; r.freeC0=r.elec&&r.presCa?r.ca.free:0;
   r.prot=r.live?Math.exp(-r.iC/I_PROT):1;
   r.rateA=r.freeA+r.galv; r.rateC=r.freeC0*r.prot;
   r.rate={[r.anSide]:r.rateA,[r.caSide]:r.rateC}; r.free={[r.anSide]:r.freeA,[r.caSide]:r.freeC0};
@@ -545,28 +592,27 @@ function cellAt(s,t){
 }
 const goneKey=r=>Object.keys(r.gone).sort().join();
 let R1=null;
-// galvanic series diagram
 const SV={w:540,h:380,ml:182,mr:18,mt:34,mb:74,emin:-1.8,emax:0.2};
 const SX=E=>SV.ml+(E-SV.emin)/(SV.emax-SV.emin)*(SV.w-SV.ml-SV.mr);
 function drawSeries(){
-  const svg=$('#dG'); svg.innerHTML=''; const r=R1;
+  const svg=$('#dS'); svg.innerHTML=''; const r=R1;
   const rows=[...METALS].sort((a,b)=>b.E-a.E), rh=(SV.h-SV.mt-SV.mb)/rows.length;
   for(let k=-9;k<=1;k++){const E=k/5, x=SX(E); el('line',{x1:x,x2:x,y1:SV.mt,y2:SV.h-SV.mb,class:'gl'},svg); if(k%2===0) el('text',{x,y:SV.h-SV.mb+16,'text-anchor':'middle',class:'tick'},svg,(E<0?'−':'')+Math.abs(E).toFixed(1));}
   el('line',{x1:SV.ml,x2:SV.w-SV.mr,y1:SV.h-SV.mb,y2:SV.h-SV.mb,class:'ax'},svg);
   el('text',{x:(SV.ml+SV.w-SV.mr)/2,y:SV.h-SV.mb+32,'text-anchor':'middle',class:'tick'},svg,'Potential in seawater, V vs SCE');
   el('text',{x:SV.ml,y:SV.mt-14,class:'tick',style:'fill:var(--anode)'},svg,'← active: corrodes');
   el('text',{x:SV.w-SV.mr,y:SV.mt-14,'text-anchor':'end',class:'tick',style:'fill:var(--cathode)'},svg,'noble: protected →');
-  const roleOf=id=>{ if(r.same&&id===GAL.L) return 'same'; if(!r.same&&id===r.an.id) return 'an'; if(!r.same&&id===r.ca.id) return 'ca'; return null;};
+  const roleOf=id=>{ if(r.same&&id===CEL.L) return 'same'; if(!r.same&&id===r.an.id) return 'an'; if(!r.same&&id===r.ca.id) return 'ca'; return null;};
   rows.forEach((m,i)=>{
     const y=SV.mt+(i+0.5)*rh, role=roleOf(m.id); const colr=role==='an'?'var(--anode)':role==='ca'?'var(--cathode)':role==='same'?'var(--ink)':'var(--muted)';
-    const g=el('g',{class:'mrow',tabindex:0,role:'button','aria-label':`${m.name}, ${m.E.toFixed(2)} V. Put on the ${GAL.slot==='L'?'left':'right'} electrode`},svg);
+    const g=el('g',{class:'mrow',tabindex:0,role:'button','aria-label':`${m.name}, ${m.E.toFixed(2)} V. Put on the ${CEL.slot==='L'?'left':'right'} electrode`},svg);
     el('rect',{class:'hit',x:0,y:y-rh/2+1,width:SV.w,height:rh-2,rx:4,fill:role?(role==='an'?'var(--anode-soft)':role==='ca'?'var(--cathode-soft)':'var(--grid)'):'transparent'},g);
-    const tags=[]; if(GAL.L===m.id) tags.push('L'); if(GAL.R===m.id) tags.push('R');
+    const tags=[]; if(CEL.L===m.id) tags.push('L'); if(CEL.R===m.id) tags.push('R');
     tags.forEach((tg,j)=>{const tx=14+j*20; el('rect',{x:tx-8,y:y-8,width:16,height:16,rx:3,fill:colr},g); el('text',{x:tx,y:y+4,'text-anchor':'middle',style:'fill:var(--panel);font-size:11px;font-weight:600'},g,tg);});
     el('text',{x:SV.ml-10,y:y+4.5,'text-anchor':'end',class:'nm',style:role?`fill:${colr};font-weight:600`:''},g,m.name);
     el('rect',{x:SX(m.lo),y:y-6,width:Math.max(4,SX(m.hi)-SX(m.lo)),height:12,rx:3,fill:role?colr:'var(--line)'},g);
     el('line',{x1:SX(m.E),x2:SX(m.E),y1:y-9,y2:y+9,stroke:role?colr:'var(--muted)','stroke-width':2},g);
-    const act=()=>{GAL[GAL.slot]=m.id; setSlot(GAL.slot==='L'?'R':'L'); gParts=[]; updGalvanic();};
+    const act=()=>{CEL[CEL.slot]=m.id; setSlot(CEL.slot==='L'?'R':'L'); kParts=[]; refresh();};
     g.addEventListener('click',act); g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act();}});
   });
   if(!r.same){const xa=SX(r.an.E), xc=SX(r.ca.E), y=SV.h-SV.mb+52;
@@ -578,92 +624,199 @@ function drawSeries(){
     el('text',{x:wide?mid:Math.max(xa,xc)+8,y:y+(wide?-6:4),'text-anchor':wide?'middle':'start',style:'font-size:12px;font-weight:600'},svg,`ΔE = ${r.dE.toFixed(2)} V`);}
   else el('text',{x:SX(r.an.E)+8,y:SV.h-SV.mb+56,style:'font-size:12px;font-weight:600'},svg,'ΔE = 0 V: same metal');
 }
-function setSlot(s){GAL.slot=s; $('#slotL').setAttribute('aria-pressed',s==='L'); $('#slotR').setAttribute('aria-pressed',s==='R'); $('#slotName').textContent=s==='L'?'left':'right';}
-// galvanic scene
-const BK={x0:52,x1:508,top:116,liq:146,bot:384}, ELX={L:168,R:392}, TOPY=66, WY=30, PLATE=18;
-const immH=A=>46+44*Math.log10(A/0.1);
-let gParts=[], ePhase=0, gAcc={};
-function plateGeom(side,r){const A=side==='L'?10:GAL.AR, h=immH(A), cx=ELX[side]; const loss=r.loss[side]; return {cx,h,w:PLATE*clamp(1-loss,0,1),loss,perf:r.gone[side]!=null};}
-function gSpawn(side,type,n,r){const g=plateGeom(side,r); if(g.perf) return;
-  for(let i=0;i<n&&gParts.length<240;i++){const face=Math.random()<0.5?-1:1, y=BK.liq+6+Math.random()*(g.h-10), x=g.cx+face*(Math.max(g.w,4)/2+2), life=2.2+Math.random()*1.6;
-    gParts.push({x,y,vx:face*(14+Math.random()*24),vy:(Math.random()-.5)*10,life,max:life,type});}}
-function gEmit(key,side,type,rate,dt,r){gAcc[key]=(gAcc[key]||0)+rate*dt; const n=Math.floor(gAcc[key]); if(n>0){gAcc[key]-=n; gSpawn(side,type,n,r);}}
-function gStep(dt,r){
-  if(r.live){gEmit('ga',r.anSide,'+',4+40*r.sG,dt,r); gEmit('gc',r.caSide,'-',4+40*r.sG,dt,r);}
+function setSlot(s){CEL.slot=s; $('#slotL').setAttribute('aria-pressed',s==='L'); $('#slotR').setAttribute('aria-pressed',s==='R'); $('#slotName').textContent=s==='L'?'left':'right';}
+const BK={x0:52,x1:508,top:116,liq:146,bot:384}, ELX={L:168,R:392}, TOPY=66, WY=30, PLATE=18, IMMH=134;
+let kParts=[], ePhase=0, kAcc={};
+function plateGeom(side,r){const loss=r.loss[side]; return {cx:ELX[side],h:IMMH,w:PLATE*clamp(1-loss,0,1),loss,perf:r.gone[side]!=null};}
+function kSpawn(side,type,n,r){const g=plateGeom(side,r); if(g.perf) return;
+  for(let i=0;i<n&&kParts.length<240;i++){const face=Math.random()<0.5?-1:1, y=BK.liq+6+Math.random()*(g.h-10), x=g.cx+face*(Math.max(g.w,4)/2+2), life=2.2+Math.random()*1.6;
+    kParts.push({x,y,vx:face*(14+Math.random()*24),vy:(Math.random()-.5)*10,life,max:life,type});}}
+function kEmit(key,side,type,rate,dt,r){kAcc[key]=(kAcc[key]||0)+rate*dt; const n=Math.floor(kAcc[key]); if(n>0){kAcc[key]-=n; kSpawn(side,type,n,r);}}
+function kStep(dt,r){
+  if(!r.elec){kParts=[]; return;}
+  if(r.live){kEmit('ga',r.anSide,'+',4+40*r.sG,dt,r); kEmit('gc',r.caSide,'-',4+40*r.sG,dt,r);}
   for(const side of ['L','R']){ if(!r.pres[side]) continue; const fr0=r.free[side]*(side===r.caSide&&r.live?r.prot:1); if(fr0<=0) continue;
-    const sF=clamp((Math.log10(fr0)+3.3)/3,0,1)*7; gEmit('f'+side+'c',side,'+',sF,dt,r); gEmit('f'+side+'o',side,'-',sF,dt,r);}
+    const sF=clamp((Math.log10(fr0)+3.3)/3,0,1)*7; kEmit('f'+side+'c',side,'+',sF,dt,r); kEmit('f'+side+'o',side,'-',sF,dt,r);}
   const lb={x0:BK.x0+6,x1:BK.x1-6,y0:BK.liq+3,y1:BK.bot-5};
-  for(const p of gParts){p.life-=dt; p.vx+=(Math.random()-.5)*40*dt; p.vy+=(Math.random()-.5)*40*dt; p.vx*=0.985; p.vy*=0.985; p.x+=p.vx*dt; p.y+=p.vy*dt;
+  for(const p of kParts){p.life-=dt; p.vx+=(Math.random()-.5)*40*dt; p.vy+=(Math.random()-.5)*40*dt; p.vx*=0.985; p.vy*=0.985; p.x+=p.vx*dt; p.y+=p.vy*dt;
     if(p.x<lb.x0||p.x>lb.x1) p.vx*=-1; p.x=clamp(p.x,lb.x0,lb.x1); if(p.y>lb.y1||p.y<lb.y0) p.vy*=-1; p.y=clamp(p.y,lb.y0,lb.y1);}
-  gParts=gParts.filter(p=>p.life>0); ePhase=(ePhase+dt*(r.live?0.05+0.35*r.sG:0))%1;}
+  kParts=kParts.filter(p=>p.life>0); ePhase=(ePhase+dt*(r.live?0.05+0.35*r.sG:0))%1;}
 function beakerPath(c,ytop,open){const {x0,x1,bot}=BK, rr=18; c.beginPath(); c.moveTo(x0,ytop); c.lineTo(x0,bot-rr); c.quadraticCurveTo(x0,bot,x0+rr,bot); c.lineTo(x1-rr,bot); c.quadraticCurveTo(x1,bot,x1,bot-rr); c.lineTo(x1,ytop); if(!open) c.closePath();}
 function alongPath(pts,s){const segs=[]; let L=0; for(let i=0;i<pts.length-1;i++){const d=Math.hypot(pts[i+1][0]-pts[i][0],pts[i+1][1]-pts[i][1]); segs.push(d); L+=d;}
   let d=s*L; for(let i=0;i<segs.length;i++){ if(d<=segs[i]){const f=d/segs[i]; return [pts[i][0]+(pts[i+1][0]-pts[i][0])*f, pts[i][1]+(pts[i+1][1]-pts[i][1])*f];} d-=segs[i];} return pts[pts.length-1];}
-function drawGalvanic(dt){
-  const r=R1, c=ctx; if(dt>0&&!RM.matches) gStep(dt,r);
+function drawCellView(dt){
+  const r=R1, c=ctx; if(dt>0&&!RM.matches) kStep(dt,r);
   c.clearRect(0,0,W,H); c.fillStyle=TK.scene; c.fillRect(0,0,W,H);
-  c.fillStyle=rgba(SEA,.55); beakerPath(c,BK.liq); c.fill();
-  for(const side of ['L','R']){ const g=plateGeom(side,r); const m=side===r.anSide?r.an:r.ca; let N=Math.min(170,Math.round(Math.sqrt(r.loss[side]/0.8)*170)); c.fillStyle=m.prod;
+  if(r.elec){c.fillStyle=rgba(SEA,.55); beakerPath(c,BK.liq); c.fill();}
+  for(const side of ['L','R']){ if(!r.user[side]||!r.elec) continue; const g=plateGeom(side,r); const m=side===r.anSide?r.an:r.ca; const N=Math.min(170,Math.round(Math.sqrt(r.loss[side]/0.8)*170)); c.fillStyle=m.prod;
     for(let i=0;i<N;i++){const h1=hash(i*7+(side==='L'?1:2)), h2=hash(i*13+5), h3=hash(i*29+11); let x,y;
       if(h1<0.55){const face=h2<0.5?-1:1; x=g.cx+face*(Math.max(g.w,3)/2+1+h3*5); y=BK.liq+4+h2*(g.h-6);} else {x=g.cx+(h2-.5)*90; y=BK.bot-3-h3*6;}
       c.beginPath(); c.arc(x,y,1.3+h3*1.6,0,Math.PI*2); c.fill();}}
   c.strokeStyle=TK.glass; c.lineWidth=2; beakerPath(c,BK.top,true); c.stroke();
-  for(const side of ['L','R']){ const g=plateGeom(side,r), m=MI[side==='L'?GAL.L:GAL.R];
+  for(const side of ['L','R']){ const m=MI[side==='L'?CEL.L:CEL.R], isAn=side===r.anSide&&!r.same, lx=side==='L'?ELX[side]-PLATE/2-10:ELX[side]+PLATE/2+10, al=side==='L'?'right':'left';
+    if(!r.user[side]){c.strokeStyle=TK.ink; c.lineWidth=2; c.beginPath(); c.moveTo(ELX[side],WY); c.lineTo(ELX[side],TOPY-4); c.stroke(); c.fillStyle=TK.ink; c.fillRect(ELX[side]-5,TOPY-6,10,6); txt('electrode removed',lx,TOPY+18,TK.muted,FONT.body,al); continue;}
+    const g=plateGeom(side,r);
     c.fillStyle=m.col; c.fillRect(g.cx-PLATE/2,TOPY,PLATE,BK.liq-TOPY);
     if(!g.perf){c.beginPath(); const n=24, rough=Math.min(3,g.loss*6); c.moveTo(g.cx-PLATE/2,BK.liq);
       for(let i=0;i<=n;i++) c.lineTo(g.cx-g.w/2+rough*hash(i*3+(side==='L'?7:9)),BK.liq+g.h*i/n);
       for(let i=n;i>=0;i--) c.lineTo(g.cx+g.w/2-rough*hash(i*5+(side==='L'?3:4)),BK.liq+g.h*i/n);
-      c.lineTo(g.cx+PLATE/2,BK.liq); c.closePath(); c.fill();}
+      c.lineTo(g.cx+PLATE/2,BK.liq); c.closePath(); c.fill();
+      // the WHOLE immersed plate is one electrode: tint its surface
+      if(r.live){c.fillStyle=isAn?TK.anode:TK.cathode; c.globalAlpha=0.9; c.fillRect(g.cx-g.w/2-3,BK.liq,3,g.h); c.fillRect(g.cx+g.w/2,BK.liq,3,g.h); c.globalAlpha=1;}}
     else {c.beginPath(); c.moveTo(g.cx-PLATE/2,BK.liq); for(let i=0;i<=6;i++) c.lineTo(g.cx-PLATE/2+PLATE*i/6,BK.liq+4+6*hash(i+3)); c.lineTo(g.cx+PLATE/2,BK.liq); c.fill();}
     c.fillStyle='rgba(255,255,255,.25)'; c.fillRect(g.cx-PLATE/2+2,TOPY,3,BK.liq-TOPY);
-    const isAn=side===r.anSide&&!r.same, lx=side==='L'?g.cx-PLATE/2-10:g.cx+PLATE/2+10, al=side==='L'?'right':'left';
-    if(!r.same) txt(isAn?'ANODE · oxidation':'CATHODE · reduction',lx,TOPY+18,isAn?TK.anode:TK.cathode,FONT.head,al);
+    if(!r.same&&r.user[r.anSide]&&r.user[r.caSide]) txt(isAn?'ANODE · oxidation':'CATHODE · reduction',lx,TOPY+18,isAn?TK.anode:TK.cathode,FONT.head,al);
     txt(m.name,lx,TOPY+34,TK.muted,FONT.body,al);
     if(g.perf) txt('used up',lx,BK.liq+22,TK.anode,FONT.lab,al);
   }
-  // wire
   c.strokeStyle=TK.ink; c.lineWidth=2; const cut=!r.wire;
   c.beginPath(); c.moveTo(ELX.L,TOPY); c.lineTo(ELX.L,WY); c.lineTo(cut?236:ELX.R,WY); if(!cut) c.lineTo(ELX.R,TOPY); c.stroke();
-  if(cut){c.beginPath(); c.moveTo(324,WY); c.lineTo(ELX.R,WY); c.lineTo(ELX.R,TOPY); c.stroke();
-    c.fillStyle=TK.panel; c.strokeStyle=TK.muted; c.lineWidth=1.5; c.beginPath(); c.rect(240,WY-11,80,22); c.fill(); c.stroke(); txt('insulator',280,WY+4,TK.ink,FONT.sm,'center');}
+  if(cut){c.beginPath(); c.moveTo(324,WY); c.lineTo(ELX.R,WY); c.lineTo(ELX.R,TOPY); c.stroke(); txt('wire cut',280,WY+4,TK.muted,FONT.sm,'center');}
   else {c.fillStyle=TK.panel; c.strokeStyle=TK.ink; c.lineWidth=1.5; c.beginPath(); c.rect(226,WY-14,108,28); c.fill(); c.stroke(); txt(r.live?fmtI(r.I):'0 A',280,WY+5,TK.ink,'600 13px "IBM Plex Mono", monospace','center');
     if(r.live){const pts=[[ELX[r.anSide],TOPY],[ELX[r.anSide],WY],[ELX[r.caSide],WY],[ELX[r.caSide],TOPY]]; c.fillStyle=TK.electron;
       for(let i=0;i<12;i++){const p=alongPath(pts,(i/12+ePhase)%1); if(p[0]>222&&p[0]<338&&Math.abs(p[1]-WY)<1) continue; c.beginPath(); c.arc(p[0],p[1],3.2,0,Math.PI*2); c.fill();}
       txt(r.anSide==='L'?'e⁻ →':'← e⁻',r.anSide==='L'?360:200,WY-10,TK.electron,FONT.lab,'center');}}
-  for(const p of gParts){const al=clamp(Math.min(1,p.life/0.5,(p.max-p.life)/0.25),0,1); ion(p.x,p.y,p.type,al);}
-  legend([['+',(r.presAn?r.an:r.ca).ion+' metal ion'],['-','OH⁻ hydroxide'],['e','electron']]);
+  for(const p of kParts){const al=clamp(Math.min(1,p.life/0.5,(p.max-p.life)/0.25),0,1); ion(p.x,p.y,p.type,al);}
+  if(!r.elec) txt('No electrolyte: beaker empty',280,BK.bot-40,TK.muted,FONT.lab,'center');
+  else legend([['+',(r.presAn?r.an:r.ca).ion+' metal ion'],['-','OH⁻ hydroxide'],['e','electron']]);
 }
-function updGalvanic(){
-  const r=R1=cellAt(GAL,GAL.t);
-  $('#mL').value=GAL.L; $('#mR').value=GAL.R; $('#aR').value=Math.log10(GAL.AR); $('#aRout').textContent=fmtArea(GAL.AR);
-  press('#gPost .chip',b=>b.dataset.q===GAL.post);
-  press('#gEx .chip',b=>{const s=GSC[b.dataset.x]; return s.L===GAL.L&&s.R===GAL.R&&Math.abs(Math.log10(s.AR/GAL.AR))<0.01;});
+function updCell(){
+  const r=R1=cellAt(CEL,CEL.t);
+  $('#kL').value=CEL.L; $('#kR').value=CEL.R;
+  press('#kParts .chip',b=>CEL.has[b.dataset.p]); $('#kpAn').textContent=(r.same?MI[CEL.L]:r.an).name; $('#kpCa').textContent=(r.same?MI[CEL.R]:r.ca).name;
+  press('#kEx .chip',b=>KSC[b.dataset.x].L===CEL.L&&KSC[b.dataset.x].R===CEL.R);
   drawSeries();
   const an=r.an.name.toLowerCase(), ca=r.ca.name.toLowerCase(); let o;
-  const ac=r.same?[['Anode','None: same metal both sides'],['Cathode','None']]:[['Anode',`${r.an.name} (more active): ${r.an.rx}`,TK.anode],['Cathode',`${r.ca.name} (more noble): O₂ + 2H₂O + 4e⁻ → 4OH⁻`,TK.cathode]];
-  if(r.gone[r.anSide]!=null&&!r.same&&r.presCa) o={big:fmtRate(r.rateC),unit:'mm/yr',sub:`${r.an.name} used up in year ${sig(r.gone[r.anSide],2)} · I = 0`,stage:`The ${an} is used up, so the cell has stopped`,
-    cap:`Once the anode has dissolved there is no anode left in the water, so the current stops. The ${ca} is no longer protected and corrodes at its own rate. This is why sacrificial anodes are inspected and replaced before they run out.`};
-  else if(r.gone[r.caSide]!=null&&r.presAn) o={big:fmtRate(r.freeA),unit:'mm/yr',sub:`${r.ca.name} used up · I = 0`,stage:`The ${ca} is used up, so the cell has stopped`,cap:`With no cathode left the galvanic current stops, and the ${an} corrodes only at its own rate.`};
-  else if(r.same) o={big:fmtRate(r.freeA),unit:'mm/yr',sub:`${r.an.name} on both sides · ΔE = 0 V`,stage:'Same metal: no driving voltage',cap:'With identical metals there is no potential difference, so no current flows through the wire. Each plate corrodes on its own, uniformly.'};
-  else if(!r.wire) o={big:fmtRate(r.freeA),unit:'mm/yr',sub:`own corrosion of the ${an} only`,stage:'Joint insulated: no galvanic current',cap:`An insulating washer or sleeve breaks the metal path between the two, so electrons from the ${an} cannot reach the ${ca}. Each metal corrodes only at its own rate.`};
-  else { const ratio=r.Ac/r.Aa;
-    o={big:fmtRate(r.rateA),unit:'mm/yr',sub:`${r.an.name} anode · ΔE = ${r.dE.toFixed(2)} V · I = ${fmtI(r.I)}`,stage:r.prot<0.1?`The ${an} corrodes and the ${ca} is protected`:`The ${an} corrodes faster than it would alone`,
-      cap:(ratio>=10?`Small anode, large cathode: the worst combination. The big ${ca} surface collects lots of oxygen and pushes all that current through a small area of ${an}.`:ratio<=0.1?`Large anode, small cathode: the current is small and spread over a big area, so the attack is mild.`:`The further apart the metals are in the series, the bigger ΔE, the bigger the current and the faster the anode goes.`)
-        +(r.prot<0.1&&r.ca.id==='fe'?` The steel is cathodically protected: this is how zinc anodes protect hulls and offshore legs.`:'')};}
-  o.ac=ac;
+  if(!r.elec) o={big:'≈ 0',unit:'',sub:'dry: no electrolyte',stage:'No electrolyte, so no cell',cap:'Without a conducting liquid there is no path for ions between the two metals, so the circuit is open and no corrosion current flows.'};
+  else if(!r.user[r.anSide]||!r.user[r.caSide]){const m=r.user[r.anSide]?r.an:r.ca; o={big:fmtRate(m.free),unit:'mm/yr',sub:`${m.name} on its own`,stage:'Only one metal: no galvanic cell',cap:`The ${m.name.toLowerCase()} now corrodes only through tiny anodes and cathodes on its own surface, as in uniform attack.`};}
+  else if(r.same) o={big:fmtRate(r.freeA),unit:'mm/yr',sub:`${r.an.name} on both sides · ΔE = 0 V`,stage:'Same metal: no driving voltage',cap:'With identical metals there is no potential difference, so no current flows through the wire. Each plate corrodes on its own surface.'};
+  else if(r.gone[r.anSide]!=null) o={big:fmtRate(r.rateC),unit:'mm/yr',sub:`${r.an.name} used up in year ${sig(r.gone[r.anSide],2)} · I = 0`,stage:`The ${an} is used up, so the cell has stopped`,cap:`With no anode left in the water the current stops, and the ${ca} corrodes at its own rate again.`};
+  else if(!r.wire) o={big:fmtRate(r.freeA),unit:'mm/yr',sub:`own corrosion of the ${an} only`,stage:'Metallic path broken: no galvanic current',cap:`Electrons released at the ${an} have no metal path to the ${ca}, so the cell cannot run even though ΔE = ${r.dE.toFixed(2)} V.`};
+  else o={big:fmtRate(r.rateA),unit:'mm/yr',sub:`${r.an.name} anode · ΔE = ${r.dE.toFixed(2)} V · I = ${fmtI(r.I)}`,stage:`The ${an} corrodes and the ${ca} is ${r.prot<0.1?'protected':'partly protected'}`,
+    cap:`All four parts are in place, so current flows: electrons through the wire from the ${an} to the ${ca}, ions through the water. `+(CEL.L==='zn'&&CEL.R==='fe'||CEL.L==='fe'&&CEL.R==='zn'?`Slide 4's 0.323 V is for each metal in a 1 M solution of its own ions; in seawater the gap is about ${r.dE.toFixed(2)} V.`:`The further apart in the series, the bigger ΔE and the bigger the current.`)};
+  o.ac=[['Anode',r.same?'none':`The whole ${an} plate: ${r.an.rx}`,TK.anode],['Cathode',r.same?'none':`The whole ${ca} plate: ${CATH}`,TK.cathode],['Idealised','Here each whole plate is one electrode. On real parts the anode and cathode are areas of a surface: see the Galvanic, Pitting and Crevice tabs.']];
   o.math=r.live?eq('I =',fr('ΔE','R<sub>water</sub> + R<sub>anode</sub> + R<sub>cathode</sub>'),'=',fr(r.dE.toFixed(2)+' V',fmtOhm(R_SOL)+' + '+fmtOhm(r.Ra)+' + '+fmtOhm(r.Rc)),'=',res(fmtI(r.I)),why("Ohm's law"))+
-      eq('i =',fr('I','A<sub>anode</sub>'),'=',fr(fmtI(r.I),fmtArea(r.Aa)),'=',res(sig(r.iA,3)+' µA/cm²'))+
-      eq('Rate =',fr('i · M','z · F · ρ'),'=',res(fmtRate(r.galv)+' mm/yr'),why(`Faraday's law, plus ${fmtRate(r.freeA)} mm/yr of its own corrosion`))
-    :eq('I = 0',why(r.wire?'no cell':'no metal path between the two'));
-  const sd=r.anSide, m=r.an, g=r.gone[sd];
-  if(g!=null){o.time=`The ${m.name.toLowerCase()} was used up in year <b>${sig(g,2)}</b>.`; if(!r.same&&r.presCa) o.time+=` Since then the ${ca} has corroded at <b>${fmtRate(r.rateC)} mm/yr</b>.`;}
-  else {const lost=r.loss[sd], tEnd=GAL.t+(1-lost)/r.rateA; o.time=`After <b>${sig(GAL.t,2)} yr</b>: <b>${lost<0.001?'< 0.001':sig(lost,2)} mm</b> lost from each face of the ${m.name.toLowerCase()}. `+(tEnd<=10?`The 2 mm plate is used up at <b>${sig(tEnd,2)} years</b>.`:`It would last about <b>${sig(tEnd,2)} years</b>.`);}
+      eq('Rate =',fr('i · M','z · F · ρ'),'=',res(fmtRate(r.galv)+' mm/yr'),why(`Faraday's law with i = ${sig(r.iA,3)} µA/cm² on 10 cm²`))
+    :eq('I = 0',why(!r.elec?'no electrolyte':!r.wire?'no metal path':'no cell'));
+  if(r.elec&&r.user[r.anSide]&&!r.same){const g=r.gone[r.anSide]; o.time=g!=null?`The ${an} plate was used up in year <b>${sig(g,2)}</b>.`:`After <b>${sig(CEL.t,2)} yr</b>: <b>${sig(r.loss[r.anSide],2)} mm</b> lost from each face of the ${an}.`;}
   setRO(o);
-  $('#status').innerHTML=`Seawater, aerated · <b>year ${sig(GAL.t,2)}</b>`;
-  $('#viewNote').textContent='Not to scale. Plate height shows the wetted area on a log scale. Particles show what is made where; their number grows with the current.';
+  $('#status').innerHTML=`${r.elec?'Seawater, aerated':'Empty beaker'} · <b>year ${sig(CEL.t,2)}</b>`;
+  $('#viewNote').textContent='Idealised cell: two separate plates joined by a wire. Particles show what is made where; their number grows with the current. Not to scale.';
 }
-const MG={key:'galvanic',get t(){return GAL.t;},set t(v){GAL.t=v;},toU:t=>t/10,fromU:u=>u*10,label:t=>'year '+sig(t,2),dur:9,upd:updGalvanic,draw:drawGalvanic,anim:true,
-  tick(){const k0=goneKey(R1); R1=cellAt(GAL,GAL.t); if(goneKey(R1)!==k0) gParts=[];}};
+const MK={key:'cell',get t(){return CEL.t;},set t(v){CEL.t=v;},toU:t=>t/10,fromU:u=>u*10,label:t=>'year '+sig(t,2),dur:9,upd:updCell,draw:drawCellView,anim:true,
+  tick(){const k0=goneKey(R1); R1=cellAt(CEL,CEL.t); if(goneKey(R1)!==k0) kParts=[];}};
+
+/* ===================================================================== GALVANIC (realistic joint) */
+// Thin-layer (transmission-line) model: the ionic current can only travel about λ = √(r·δ/ρ) along the surface
+const JENV={imm:{name:'immersed in seawater',delta:2,rho:20,wet:1},spray:{name:'wet with a sea-spray film',delta:0.01,rho:20,wet:0.5},rain:{name:'wet with a rain film',delta:0.01,rho:2e4,wet:0.3}};
+const JSC={alarm:{L:'fe',R:'cu',wL:0.5,wR:100,env:'imm'},cp:{L:'zn',R:'fe',wL:10,wR:100,env:'imm'}};
+const JN={L:'fe',R:'cu',wL:5,wR:5,env:'spray',post:'none',t:3};
+const THK=2;
+const fmtLen=cm=>cm<1?sig(cm*10,2)+' mm':cm<100?sig(cm,2)+' cm':sig(cm/100,2)+' m';
+function joint(){
+  const mL=MI[JN.L], mR=MI[JN.R], e=JENV[JN.env], same=JN.L===JN.R;
+  const anS=mL.E<=mR.E?'L':'R', caS=anS==='L'?'R':'L', an=anS==='L'?mL:mR, ca=caS==='L'?mL:mR;
+  const w={L:JN.wL,R:JN.wR}, La=w[anS], Lc=w[caS], dE=same?0:ca.E-an.E;
+  const lamA=Math.sqrt(R_A*e.delta/e.rho), lamC=Math.sqrt(R_C*e.delta/e.rho);
+  const Za=Math.sqrt(R_A*e.rho/e.delta)/Math.tanh(La/lamA), Zc=Math.sqrt(R_C*e.rho/e.delta)/Math.tanh(Lc/lamC);
+  const live=!same&&JN.post!=='washer', I=live?dE/(Za+Zc):0; // A per cm of joint
+  const cr=(L,x,l)=>L/l>20?Math.exp(-x/l)*(1+Math.exp(-2*(L-x)/l)):Math.cosh((L-x)/l)/Math.cosh(L/l); // overflow-safe cosh ratio
+  const ia=x=>x>La?0:I/(lamA*Math.tanh(La/lamA))*cr(La,x,lamA); // A/cm²
+  const ic=x=>x>Lc?0:I/(lamC*Math.tanh(Lc/lamC))*cr(Lc,x,lamC);
+  const kA=kFar(an);
+  const rate=(side,x)=>{ if(x>w[side]) return null; return side===anS?e.wet*(an.free+kA*ia(x)*1e6):e.wet*ca.free*Math.exp(-ic(x)*1e6/I_PROT); };
+  const rel=(side,x)=>{ if(!live) return 0; return side===anS?ia(x)/ia(0):ic(x)/ic(0); };
+  const r0=rate(anS,0), tPerf=THK/r0;
+  const view=[0.5,1,2,3,5].find(v=>v>=3*lamA)||5; // half-width of the strip drawn, cm
+  return {mL,mR,e,same,anS,caS,an,ca,w,La,Lc,dE,lamA,lamC,Za,Zc,live,I,ia,ic,kA,rate,rel,r0,tPerf,view,sG:live?clamp((Math.log10(I)+7)/4,0,1):0,
+    reachA:Math.min(La,lamA),reachC:Math.min(Lc,lamC)};
+}
+let J=null, axJ=null;
+function drawDG(k){const svg=$('#dG'); svg.innerHTML=''; const h=k.view;
+  const ax=axJ=axes(svg,{w:540,h:340,ml:56,mr:20,mt:30,mb:44,x0:-h,x1:h,y0:0.001,y1:10,ylog:true,xt:[-h,-h/2,0,h/2,h].map(v=>[v,(v<0?'−':'')+sig(Math.abs(v)*10,2)]),yt:[[0.001,'0.001'],[0.01,'0.01'],[0.1,'0.1'],[1,'1'],[10,'10']],xl:'Distance from the joint, mm',yl:'Corrosion rate, mm/yr'});
+  for(const side of ['L','R']){const sg=side==='L'?-1:1, isAn=side===k.anS&&!k.same, col=isAn?'var(--anode)':k.same?'var(--ink)':'var(--cathode)'; const pts=[];
+    for(let i=0;i<=120;i++){const x=h*i/120, r=k.rate(side,x); if(r==null) break; pts.push([sg*x,clamp(r,0.001,10)]);}
+    if(pts.length>1) el('polyline',{points:poly(pts,ax.X,ax.Y),fill:'none',stroke:col,'stroke-width':2.4},svg);
+    const m=side==='L'?k.mL:k.mR, own=clamp(m.free*k.e.wet,0.001,10);
+    el('line',{x1:ax.X(side==='L'?-h:0),x2:ax.X(side==='L'?0:h),y1:ax.Y(own),y2:ax.Y(own),stroke:'var(--muted)','stroke-dasharray':'3 4'},svg);
+    el('text',{x:ax.X(sg*h*0.5),y:18,'text-anchor':'middle',style:`font-size:11.5px;font-weight:600;fill:${col}`},svg,m.name);
+    if(k.w[side]<h) el('text',{x:ax.X(sg*k.w[side]),y:ax.Y(0.0015),'text-anchor':side==='L'?'end':'start',class:'tick'},svg,'edge');}
+  el('line',{x1:ax.X(0),x2:ax.X(0),y1:30,y2:340-44,stroke:'var(--ink)','stroke-width':1.5},svg);
+  el('text',{x:ax.X(0)+6,y:ax.Y(5),class:'tick'},svg,'joint');
+  el('text',{x:ax.X(h)-4,y:ax.Y(0.0015)-14,'text-anchor':'end',class:'tick'},svg,'dashed: each metal on its own');}
+function drawJoint(){const c=ctx, k=J, h=k.view, X0=280, PXc=266/h, t=JN.t; c.clearRect(0,0,W,H); c.fillStyle=TK.scene; c.fillRect(0,0,W,H);
+  const xOf=(side,x)=>X0+(side==='L'?-1:1)*x*PXc, metalAt=px=>{const side=px<X0?'L':'R', x=Math.abs(px-X0)/PXc; return x<=k.w[side]?{side,x}:null;};
+  // plan view
+  txt('SURFACE, LOOKING DOWN ON THE JOINT',14,16,TK.muted,FONT.sm);
+  for(let px=14;px<W-14;px++){const m=metalAt(px+0.5); if(!m){c.fillStyle='#8f8a80'; c.fillRect(px,24,1,70); continue;}
+    const mt=m.side==='L'?k.mL:k.mR, loss=k.rate(m.side,m.x)*t; c.fillStyle=mt.col; c.fillRect(px,24,1,70);
+    const a=clamp(loss/0.4,0,0.9); if(a>0.02){c.fillStyle=rgba(hex2rgb(mt.prod),a); for(let yy=24;yy<94;yy+=3){ if(hash(px*31+yy)<0.55+0.45*a) c.fillRect(px,yy,1,3);}}}
+  c.fillStyle='#262626'; c.fillRect(X0-0.5,24,1.5,70);
+  // cross-section
+  const film=JN.env!=='imm', YS=film?196:262, PXmm=film?52:34, YB=YS+THK*PXmm;
+  txt('CROSS-SECTION THROUGH THE JOINT',14,118,TK.muted,FONT.sm);
+  const ytop=film?YS-16:126; c.fillStyle=JN.env==='rain'?rgba(TAP,.6):rgba(SEA,.55); c.fillRect(14,ytop,W-28,YS-ytop+2);
+  if(film) txt(`water film (really about 0.1 mm thick)`,W-16,118,TK.ink,FONT.sm,'right'); else txt('seawater',20,146,TK.ink,FONT.lab);
+  // metal with loss profile
+  const depth=new Float32Array(W);
+  for(let px=14;px<W-14;px++){const m=metalAt(px+0.5); if(!m){c.fillStyle='#8f8a80'; c.fillRect(px,YS,1,YB-YS); continue;}
+    const mt=m.side==='L'?k.mL:k.mR; const d=Math.min(THK,k.rate(m.side,m.x)*t)*PXmm; depth[px]=d; c.fillStyle=mt.col; c.fillRect(px,YS+d,1,YB-YS-d);
+    if(d>1.5){c.fillStyle=rgba(hex2rgb(mt.prod),0.85); const pr=Math.min(d*1.3,26); c.fillRect(px,YS+d-pr,1,pr);}}
+  if(JN.post==='washer'){c.fillStyle='#1d1d1d'; c.fillRect(X0-3,YS-4,6,YB-YS+4); txt('insulating gasket',X0,YB+14,TK.ink,FONT.sm,'center');}
+  else {c.fillStyle='#262626'; c.fillRect(X0-0.5,YS,1.5,YB-YS);}
+  // where the anode and cathode are: surface strip coloured by local current density
+  for(let px=14;px<W-14;px++){const m=metalAt(px+0.5); if(!m) continue; const rl=k.rel(m.side,m.x), isAn=m.side===k.anS; if(rl>0.04){c.globalAlpha=clamp(rl,0.15,1); c.fillStyle=isAn?TK.anode:TK.cathode; c.fillRect(px,YS+depth[px]-4,1,4); c.globalAlpha=1;}}
+  // local anodes and cathodes where the galvanic current has faded
+  for(let j=0;j<46;j++){const s=siteAt(j+300); const px=14+s.u*(W-28), m=metalAt(px); if(!m) continue; const rl=k.rel(m.side,m.x); if(rl>0.3) continue; const al=Math.sin(Math.PI*s.ph)*(1-rl/0.3);
+    c.globalAlpha=al; c.fillStyle=s.an?TK.anode:TK.cathode; c.fillRect(px-4,YS+depth[px|0]-3,8,3); c.globalAlpha=1;}
+  // ionic current through the water, from anodic area to cathodic area
+  if(k.live){const n=Math.round(3+8*k.sG), qa=q=>k.lamA*Math.asinh(q*Math.sinh(Math.min(k.La,8*k.lamA)/k.lamA)), qc=q=>k.lamC*Math.asinh(q*Math.sinh(Math.min(k.Lc,8*k.lamC)/k.lamC));
+    c.strokeStyle=TK.ink; c.lineWidth=1; c.globalAlpha=0.55;
+    for(let i=0;i<n;i++){const q=(i+0.5)/n; const xa=xOf(k.anS,Math.min(qa(q),h)), xc=xOf(k.caS,Math.min(qc(q),h)); const span=Math.abs(xc-xa);
+      const hy=film?4:Math.min(YS-ytop-14,span*0.45); c.setLineDash([4,5]); c.lineDashOffset=-CLK*30*(k.anS==='L'?1:-1);
+      c.beginPath(); c.moveTo(xa,YS-3); c.quadraticCurveTo((xa+xc)/2,YS-3-hy*2,xc,YS-3); c.stroke();}
+    c.setLineDash([]); c.globalAlpha=1;
+    // electrons crossing the joint inside the metal
+    const ea=xOf(k.anS,Math.min(h,k.reachA)), ec=xOf(k.caS,Math.min(h,k.reachC)); c.fillStyle=TK.electron;
+    for(let i=0;i<9;i++){const f=(i/9+CLK*(0.08+0.3*k.sG))%1; c.beginPath(); c.arc(ea+(ec-ea)*f,YS+THK*PXmm*0.55,3,0,Math.PI*2); c.fill();}
+    txt('e⁻ through the metal',X0,YB-8,TK.ink,FONT.sm,'center');}
+  // labels
+  for(const side of ['L','R']){const m=side==='L'?k.mL:k.mR, al=side==='L'?'left':'right', x=side==='L'?18:W-18; txt(m.name,x,YB+16,TK.ink,FONT.head,al);}
+  const yl=film?YS-46:YS-40;
+  if(k.live){const cl=(side,x)=>side==='L'?clamp(x,74,X0-60):clamp(x,X0+60,W-74);
+    txt('ANODIC AREA',cl(k.anS,xOf(k.anS,Math.min(h*0.5,k.reachA*0.5))),yl,TK.anode,FONT.head,'center');
+    txt('CATHODIC AREA',cl(k.caS,xOf(k.caS,Math.min(h*0.6,Math.max(k.reachC*0.5,h*0.25)))),yl,TK.cathode,FONT.head,'center');
+    if(k.reachA<h*0.45) txt('own local cells',cl(k.anS,xOf(k.anS,h*0.82)),yl+16,TK.muted,FONT.sm,'center');}
+  else txt('every area has its own small anodes and cathodes',X0,yl,TK.muted,FONT.sm,'center');
+  c.fillStyle='#262626'; const sb=h>=2?10:h>=1?5:1; c.fillRect(W-24-sb/10*PXc,104,sb/10*PXc,3); txt(`${sb} mm`,W-24-sb/20*PXc,100,TK.ink,FONT.sm,'center');
+  legend([]);}
+function updJoint(){
+  const k=J=joint();
+  $('#gL').value=JN.L; $('#gR').value=JN.R; $('#gWL').value=Math.log10(JN.wL); $('#gWR').value=Math.log10(JN.wR); $('#gWLout').textContent=fmtLen(JN.wL); $('#gWRout').textContent=fmtLen(JN.wR);
+  press('#gEnv .chip',b=>b.dataset.e===JN.env); press('#gPost .chip',b=>b.dataset.q===JN.post);
+  press('#gEx .chip',b=>{const s=JSC[b.dataset.x]; return s.L===JN.L&&s.R===JN.R&&s.env===JN.env&&Math.abs(s.wL-JN.wL)<0.01&&Math.abs(s.wR-JN.wR)<0.01;});
+  drawDG(k);
+  const an=k.an.name.toLowerCase(), ca=k.ca.name.toLowerCase(); let o;
+  if(k.same) o={big:fmtRate(k.mL.free*k.e.wet),unit:'mm/yr',sub:`${k.mL.name} on both sides`,stage:'Same metal: no galvanic attack',cap:'With no potential difference across the joint, both sides corrode evenly through their own small, moving anodes and cathodes.'};
+  else if(!k.live) o={big:fmtRate(k.an.free*k.e.wet),unit:'mm/yr',sub:`${k.an.name} next to ${ca}, insulated`,stage:'Joint insulated: no galvanic current',cap:`The gasket breaks the metal path, so electrons from the ${an} cannot reach the ${ca}. Each side corrodes only through its own small anodes and cathodes.`};
+  else {const narrow=k.reachA<0.3, whole=k.lamA>=k.La*0.8;
+    o={big:fmtRate(k.r0),unit:'mm/yr at the joint',sub:`${k.an.name} next to ${ca} · ΔE = ${k.dE.toFixed(2)} V · ${fmtI(k.I)} per cm of joint`,
+      stage:whole?`The whole ${an} piece is the anode`:narrow?`Attack cut into a narrow groove along the joint`:`Attack strongest at the joint, fading within about ${fmtLen(k.lamA)}`,
+      cap:(JN.env==='imm'?`In seawater the ionic current travels a long way through the water, so it reaches the whole ${an} surface. How fast it goes then depends mostly on how much ${ca} it is coupled to.`
+        :`The water film is thin${JN.env==='rain'?' and rain conducts poorly':''}, so the ionic current can only travel about ${fmtLen(k.lamA)} along the surface. Only the ${an} right next to the joint acts as the anode; further out each metal carries on with its own small anodes and cathodes.`)
+        +(k.La<=1&&k.Lc>=20?` A small piece of ${an} against a big area of ${ca} is the worst case: all that cathode current is focused on it.`:'')+(k.ca.id==='fe'&&k.ic(0)*1e6>I_PROT*2?` The steel near the zinc is cathodically protected.`:'')};}
+  o.ac=k.live?[['Anode',`The ${an} surface within about ${fmtLen(k.reachA)} of the joint`,TK.anode],['Cathode',`The ${ca} surface within about ${fmtLen(k.reachC)} of the joint`,TK.cathode],['Further away','Each metal has its own small anodes and cathodes, as in uniform attack. A single piece of metal can be part anode, part cathode.']]
+    :[['Anode','Small, moving spots on every surface',TK.anode],['Cathode','Small, moving spots in between',TK.cathode],['Galvanic','None across the joint']];
+  o.math=k.live?eq('Reach λ =',`√(${fr('r · δ','ρ')})`,'=',`√(${fr(`1000 Ω·cm² × ${k.e.delta} cm`,`${sig(k.e.rho,2)} Ω·cm`)})`,'=',res(fmtLen(k.lamA)),why(`on the ${an}; δ = water depth that carries the current`))+
+      eq('Current per cm of joint =',res(fmtI(k.I)),why('ΔE divided by the resistance of the anode and cathode areas the current can reach'))+
+      eq('At the joint i =',res(sig(k.ia(0)*1e6,3)+' µA/cm²'),'→',res(fmtRate(k.r0)+' mm/yr'),why(`Faraday's law${k.e.wet<1?`, wet ${Math.round(k.e.wet*100)} % of the time`:''}`))
+    :eq('No current across the joint');
+  if(k.live){o.time=`After <b>${sig(JN.t,2)} yr</b>: <b>${sig(Math.min(THK,k.r0*JN.t),2)} mm</b> lost at the joint`+(k.La>k.lamA*2?`, <b>${sig(k.rate(k.anS,Math.min(k.La,k.view))*JN.t,2)} mm</b> ${fmtLen(Math.min(k.La,k.view))} away. `:'. ')+(k.tPerf<=10?`A 2 mm sheet is holed at the joint at <b>${sig(k.tPerf,2)} years</b>.`:`A 2 mm sheet would last about <b>${sig(k.tPerf,2)} years</b> at the joint.`);
+    if(k.ca.id==='fe'){const far=Math.min(k.Lc,100); o.time+=` ${fmtLen(far)} from the zinc, the steel corrodes at <b>${fmtRate(k.rate(k.caS,far))} mm/yr</b> (alone: ${fmtRate(k.ca.free*k.e.wet)}).`;}}
+  setRO(o);
+  $('#status').innerHTML=`${k.mL.name} | ${k.mR.name}, ${k.e.name} · <b>year ${sig(JN.t,2)}</b>`;
+  $('#viewNote').textContent=`Top: the surface. Bottom: a cut through the joint, depth exaggerated (2 mm sheet). The coloured strip on the surface shows which areas are anodic (orange) and cathodic (blue); dashed lines are the ionic current in the water.`;}
+const MJ={key:'galvanic',get t(){return JN.t;},set t(v){JN.t=v;},toU:t=>t/10,fromU:u=>u*10,label:t=>'year '+sig(t,2),dur:9,upd:updJoint,draw:drawJoint,anim:true};
 
 /* ===================================================================== PITTING */
 const ALLOYS={'304':{short:'304',name:'304 stainless',Cr:18,Mo:0,N:0.05},'316':{short:'316',name:'316 stainless',Cr:17,Mo:2.1,N:0.05},'2507':{short:'2507 super duplex',name:'2507 super duplex',Cr:25,Mo:3.8,N:0.27}};
@@ -903,7 +1056,7 @@ function updFlow(){const k=flowCalc(), ex=FEX[FLO.ex];
 const MF={key:'flow',get t(){return FLO.t;},set t(v){FLO.t=v;},toU:t=>t/10,fromU:u=>u*10,label:t=>'year '+sig(t,2),dur:9,upd:updFlow,draw:drawFlow,anim:true};
 
 /* ===================================================================== shell */
-const MODES={uniform:MU,galvanic:MG,pitting:MP,crevice:MC,flow:MF};
+const MODES={cell:MK,uniform:MU,galvanic:MJ,pitting:MP,crevice:MC,flow:MF};
 let mode='uniform', playing=false, raf=0, last=0;
 const PLAY='<svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z"/></svg>', PAUSE='<svg viewBox="0 0 12 12"><path d="M2 1h3v10H2zM7 1h3v10H7z"/></svg>';
 function setPlayBtn(){$('#play').innerHTML=(playing?PAUSE:PLAY)+`<span>${playing?'Pause':'Run'}</span>`;}
@@ -929,13 +1082,18 @@ function init(){
   $('#uA').addEventListener('input',e=>{UNI.allow=+e.target.value; refresh();});
   $('#uI').addEventListener('input',e=>{UNI.I=10**+e.target.value; refresh();});
   clickable($('#dU'),()=>axU,v=>{UNI.t=clamp(v,0,MU.tMax()); refresh();});
-  // galvanic
-  for(const id of ['mL','mR']) $('#'+id).innerHTML=METALS.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
-  $('#mL').addEventListener('change',e=>{GAL.L=e.target.value; gParts=[]; refresh();}); $('#mR').addEventListener('change',e=>{GAL.R=e.target.value; gParts=[]; refresh();});
-  $('#aR').addEventListener('input',e=>{GAL.AR=10**+e.target.value; refresh();});
-  $$('#gPost .chip').forEach(b=>b.addEventListener('click',()=>{GAL.post=b.dataset.q; gParts=[]; refresh();}));
-  $$('#gEx .chip').forEach(b=>b.addEventListener('click',()=>{Object.assign(GAL,GSC[b.dataset.x],{post:'none',t:0}); gParts=[]; refresh();}));
+  // corrosion cell
+  for(const id of ['kL','kR','gL','gR']) $('#'+id).innerHTML=METALS.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+  $('#kL').addEventListener('change',e=>{CEL.L=e.target.value; kParts=[]; refresh();}); $('#kR').addEventListener('change',e=>{CEL.R=e.target.value; kParts=[]; refresh();});
+  $$('#kParts .chip').forEach(b=>b.addEventListener('click',()=>{CEL.has[b.dataset.p]=!CEL.has[b.dataset.p]; kParts=[]; refresh();}));
+  $$('#kEx .chip').forEach(b=>b.addEventListener('click',()=>{Object.assign(CEL,KSC[b.dataset.x]); CEL.has={anode:true,cathode:true,wire:true,elec:true}; kParts=[]; refresh();}));
   $('#slotL').addEventListener('click',()=>setSlot('L')); $('#slotR').addEventListener('click',()=>setSlot('R'));
+  // galvanic joint
+  $('#gL').addEventListener('change',e=>{JN.L=e.target.value; refresh();}); $('#gR').addEventListener('change',e=>{JN.R=e.target.value; refresh();});
+  $('#gWL').addEventListener('input',e=>{JN.wL=10**+e.target.value; refresh();}); $('#gWR').addEventListener('input',e=>{JN.wR=10**+e.target.value; refresh();});
+  $$('#gEnv .chip').forEach(b=>b.addEventListener('click',()=>{JN.env=b.dataset.e; refresh();}));
+  $$('#gPost .chip').forEach(b=>b.addEventListener('click',()=>{JN.post=b.dataset.q; refresh();}));
+  $$('#gEx .chip').forEach(b=>b.addEventListener('click',()=>{Object.assign(JN,JSC[b.dataset.x],{post:'none'}); refresh();}));
   // pitting
   alloyChips('#pAlloy',a=>{PIT.alloy=a; refresh();}); alloyChips('#cAlloy',a=>{CRV.alloy=a; refresh();});
   $('#fMat').innerHTML=Object.entries(MATS).map(([key,m])=>`<button class="chip" data-m="${key}">${m.short}</button>`).join('');
@@ -967,8 +1125,8 @@ function init(){
   new MutationObserver(retheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
   if(document.fonts&&document.fonts.ready) document.fonts.ready.then(retheme);
 }
-readTokens(); sizeCanvas(); R1=cellAt(GAL,GAL.t); init();
-if(!RM.matches){for(let i=0;i<60;i++) gStep(0.05,R1);} CLK=1.3;
-const h=location.hash.slice(1); setMode(MODES[h]?h:'uniform',false);
+readTokens(); sizeCanvas(); R1=cellAt(CEL,CEL.t); J=joint(); init();
+if(!RM.matches){for(let i=0;i<60;i++) kStep(0.05,R1);} CLK=1.3;
+const h=location.hash.slice(1); setMode(MODES[h]?h:'cell',false);
 })();
 </script>
