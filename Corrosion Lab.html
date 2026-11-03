@@ -1,0 +1,974 @@
+<title>Corrosion Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: lab bench. Left = controls + chart for the chosen corrosion type; right = specimen view + readouts (where the anode and cathode are, Faraday's law, time) */
+:root{
+  --bg:#edf1f1; --panel:#f8fafa; --ink:#162024; --muted:#566a70; --line:#cad6d8; --grid:#dfe7e8;
+  --scene:#e4ebeb; --steel:#5d666b; --water:#4f8f9c;
+  --anode:#b3461d; --anode-soft:rgba(179,70,29,.12);
+  --cathode:#28698a; --cathode-soft:rgba(40,105,138,.12);
+  --electron:#b97f08; --glass:#7f9196; --chloride:#2f8a4e;
+  --display:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1416; --panel:#151d20; --ink:#e2eaec; --muted:#91a5ab; --line:#29373b; --grid:#1d282b;
+  --scene:#10181a; --steel:#59636a; --water:#6fb0bd;
+  --anode:#e2723f; --anode-soft:rgba(226,114,63,.16); --cathode:#62abd0; --cathode-soft:rgba(98,171,208,.16);
+  --electron:#f0b53a; --glass:#6d8086; --chloride:#5cc27c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1416; --panel:#151d20; --ink:#e2eaec; --muted:#91a5ab; --line:#29373b; --grid:#1d282b;
+  --scene:#10181a; --steel:#59636a; --water:#6fb0bd;
+  --anode:#e2723f; --anode-soft:rgba(226,114,63,.16); --cathode:#62abd0; --cathode-soft:rgba(98,171,208,.16);
+  --electron:#f0b53a; --glass:#6d8086; --chloride:#5cc27c; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15.5px;line-height:1.5}
+.page{max-width:1260px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:grid;gap:4px;margin-bottom:14px}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(28px,4.2vw,42px);line-height:1.02;margin:0;text-wrap:balance;letter-spacing:.005em}
+.lede{margin:2px 0 0;color:var(--muted);max-width:78ch}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:18px}
+.tab{appearance:none;border:0;background:none;color:var(--muted);font:600 15px/1.1 var(--body);padding:11px 13px 12px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px;text-align:left}
+.tab small{display:block;font:400 11.5px/1.2 var(--mono);margin-top:3px;opacity:.85}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--anode)}
+.tab:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,.diagram [tabindex]:focus-visible{outline:2px solid var(--anode);outline-offset:2px}
+.lab{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.04fr);gap:24px;align-items:start}
+@media (max-width:940px){.lab{grid-template-columns:minmax(0,1fr)}}
+.col{display:grid;gap:14px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;min-width:0}
+.ctl{display:grid;gap:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lbl{font-size:12px;font-family:var(--mono);color:var(--muted);letter-spacing:.03em}
+.group{display:grid;gap:6px}
+.slider{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center}
+.slider output{font-family:var(--mono);font-size:13px;min-width:9ch;text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--anode)}
+.chip{appearance:none;border:1px solid var(--line);background:transparent;color:var(--ink);font:500 13.5px/1.15 var(--body);padding:7px 10px;border-radius:4px;cursor:pointer;text-align:left}
+.chip:hover{border-color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.chip small{font-family:var(--mono);font-size:11px;opacity:.75;margin-left:4px}
+.ex .chip{border-style:dashed}
+.ex .chip[aria-pressed="true"]{border-style:solid}
+.selects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.selects label{display:grid;gap:4px}
+select{font:500 14px var(--body);padding:7px 8px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink);width:100%}
+.transport{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center}
+.transport output{font-family:var(--mono);font-size:13px;min-width:9ch;text-align:right;font-variant-numeric:tabular-nums}
+.play{appearance:none;border:0;background:var(--anode);color:#fff;font:700 13.5px/1 var(--body);padding:10px 14px;border-radius:4px;cursor:pointer;display:inline-flex;gap:8px;align-items:center;min-width:96px;justify-content:center}
+.play svg{width:12px;height:12px;fill:currentColor}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{appearance:none;border:0;background:transparent;color:var(--muted);font:600 12.5px/1 var(--body);padding:7px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+.diagram{width:100%;height:auto;display:block;user-select:none}
+.diagram.click{touch-action:none;cursor:crosshair}
+.diagram text{font-family:var(--mono);fill:var(--ink)}
+.diagram .tick{font-size:10.5px;fill:var(--muted)}
+.diagram .gl{stroke:var(--grid);stroke-width:1}
+.diagram .ax{stroke:var(--ink);stroke-width:1;fill:none}
+.diagram .nm{font-family:var(--body);font-size:13px;font-weight:500}
+.diagram .mrow{cursor:pointer}
+.diagram .mrow:hover .hit{stroke:var(--muted);stroke-width:1}
+.hint{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+.scope{margin:0;display:grid;gap:8px}
+.scopebar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.status{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.status b{color:var(--ink);font-weight:600}
+.canvaswrap{position:relative;width:100%;max-width:100%;aspect-ratio:7/5;border-radius:4px;overflow:hidden;background:var(--scene)}
+canvas#view{width:100%;height:100%;display:block}
+.note{font-size:12px;color:var(--muted);margin:0}
+.big{display:flex;gap:10px 16px;align-items:baseline;flex-wrap:wrap}
+.big .T{font-family:var(--display);font-weight:700;font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.big .unit{font-family:var(--display);font-weight:600;font-size:20px;color:var(--muted);margin-left:-8px}
+.big .sub{font-family:var(--mono);font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.stage{font-family:var(--display);font-weight:700;font-size:19px;margin:10px 0 2px}
+.caption{margin:0;max-width:68ch}
+.ac{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 12px;margin-top:12px;padding:10px 12px;border-radius:4px;background:var(--bg);font-size:14px;align-items:baseline}
+.ac .k{font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;text-transform:uppercase}
+.ac .eqn{font-family:var(--mono);font-size:13.5px}
+.extra{margin-top:12px}
+.extra:empty{display:none}
+.barhead{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-family:var(--mono);color:var(--muted);margin-bottom:4px;flex-wrap:wrap}
+.barhead b{color:var(--ink);font-weight:600}
+.stack{display:flex;height:14px;border-radius:3px;overflow:hidden;background:var(--grid)}
+.stack i{display:block;height:100%;transition:width .15s linear}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:13px}
+.legend span{display:inline-flex;gap:6px;align-items:center;font-variant-numeric:tabular-nums}
+.legend em{font-style:normal;font-family:var(--mono);font-size:12px}
+.sw{width:10px;height:10px;border-radius:2px;display:inline-block}
+.cmp{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 10px;align-items:center;font-size:13.5px}
+.cmp .tot{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:14px}
+.steps li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:baseline;color:var(--muted)}
+.steps li b{font-family:var(--mono);font-size:12px;text-align:center;border:1px solid var(--line);border-radius:3px;line-height:18px}
+.steps li.done{color:var(--ink)}
+.steps li.done b{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.steps li.now{color:var(--ink);font-weight:600}
+.steps li.now b{border-color:var(--anode);color:var(--anode)}
+.math{font-family:var(--mono);font-size:13px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:grid;gap:9px;overflow-x:auto}
+.eq{display:flex;align-items:center;gap:6px;flex-wrap:wrap;white-space:nowrap}
+.eq .why{font-family:var(--body);font-size:12.5px;color:var(--muted);white-space:normal}
+.fr{display:inline-flex;flex-direction:column;text-align:center;vertical-align:middle}
+.fr>span:first-child{border-bottom:1px solid currentColor;padding:0 3px 1px}
+.fr>span:last-child{padding:1px 3px 0}
+.res{color:var(--anode);font-weight:600}
+.timebox{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:14px}
+.timebox b{font-family:var(--mono);font-weight:600}
+details.notes{margin-top:22px;border-top:1px solid var(--line);padding-top:12px;color:var(--muted);font-size:13.5px}
+details.notes summary{cursor:pointer;font-weight:600;color:var(--ink)}
+details.notes h3{font-family:var(--display);font-size:16px;color:var(--ink);margin:12px 0 4px}
+details.notes ul{padding-left:18px;margin:4px 0 0;max-width:92ch}
+details.notes code{font-family:var(--mono);font-size:12.5px}
+@media (prefers-reduced-motion: reduce){.stack i{transition:none}}
+</style>
+
+<div class="page">
+  <header>
+    <div class="eyebrow">INU1126 Engineering Materials · Types of corrosion</div>
+    <h1>Corrosion Lab</h1>
+    <p class="lede">Five forms of aqueous corrosion. Each tab shows where the anode and cathode are, how fast the metal goes (Faraday's law), what makes it worse, and how to limit it.</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Type of corrosion">
+    <button class="tab" role="tab" id="tab-uniform" data-m="uniform" aria-selected="true">Uniform<small>predictable</small></button>
+    <button class="tab" role="tab" id="tab-galvanic" data-m="galvanic" aria-selected="false">Galvanic<small>two metals</small></button>
+    <button class="tab" role="tab" id="tab-pitting" data-m="pitting" aria-selected="false">Pitting<small>hard to spot</small></button>
+    <button class="tab" role="tab" id="tab-crevice" data-m="crevice" aria-selected="false">Crevice<small>no oxygen inside</small></button>
+    <button class="tab" role="tab" id="tab-flow" data-m="flow" aria-selected="false">Flow<small>erosion &amp; cavitation</small></button>
+  </nav>
+
+  <main class="lab">
+    <section class="col">
+      <div class="card ctl">
+        <div class="transport">
+          <button class="play" id="play"><svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z"/></svg><span>Run</span></button>
+          <input type="range" id="tr" min="0" max="1000" step="1" value="300" aria-label="Time">
+          <output id="trout">–</output>
+        </div>
+      </div>
+
+      <!-- ============ UNIFORM ============ -->
+      <div id="panel-uniform" class="col" role="tabpanel" aria-labelledby="tab-uniform">
+        <div class="card ctl">
+          <div class="group"><div class="lbl">Example</div>
+            <div class="row ex" id="uEx">
+              <button class="chip" data-x="plate">Steel plate in seawater</button>
+              <button class="chip" data-x="rebar">Rebar in concrete <small>slide 17</small></button>
+            </div></div>
+          <div id="uPlateCtl" class="ctl">
+            <div class="slider"><label class="lbl" for="uR">Corrosion rate</label><input type="range" id="uR" min="-2" max="0" step="0.01" value="-1"><output id="uRout">0.1 mm/yr</output></div>
+            <div class="slider"><label class="lbl" for="uA">Corrosion allowance</label><input type="range" id="uA" min="0.5" max="6" step="0.5" value="3"><output id="uAout">3 mm</output></div>
+          </div>
+          <div id="uBarCtl" class="ctl" hidden>
+            <div class="slider"><label class="lbl" for="uI">Corrosion current</label><input type="range" id="uI" min="-0.3" max="1.7" step="0.01" value="0.699"><output id="uIout">5 mA</output></div>
+            <p class="hint" style="margin:0">10 mm bar, 1 m long. It is too weak once it is down to three quarters of its diameter.</p>
+          </div>
+        </div>
+        <div class="card"><svg class="diagram click" id="dU" viewBox="0 0 540 340" role="img" aria-label="Remaining thickness against time"></svg>
+          <p class="hint">Click or drag on the chart to move through time.</p></div>
+      </div>
+
+      <!-- ============ GALVANIC ============ -->
+      <div id="panel-galvanic" class="col" role="tabpanel" aria-labelledby="tab-galvanic" hidden>
+        <div class="card ctl">
+          <div class="group"><div class="lbl">Example</div>
+            <div class="row ex" id="gEx">
+              <button class="chip" data-x="alarm">Iron nails in copper sheet <small>HMS Alarm</small></button>
+              <button class="chip" data-x="cp">Zinc anode on a steel hull <small>slide 8</small></button>
+            </div></div>
+          <div class="selects">
+            <label><span class="lbl">Left electrode (10 cm²)</span><select id="mL"></select></label>
+            <label><span class="lbl">Right electrode</span><select id="mR"></select></label>
+          </div>
+          <div class="slider"><label class="lbl" for="aR">Right electrode area</label><input type="range" id="aR" min="-1" max="3" step="0.01" value="1"><output id="aRout">10 cm²</output></div>
+          <div class="group"><div class="lbl">Limit it</div>
+            <div class="row" id="gPost">
+              <button class="chip" data-q="none">As built</button>
+              <button class="chip" data-q="washer">Insulate the joint</button>
+            </div></div>
+          <p class="hint" style="margin:0">Seawater, aerated. The slide's other two fixes are the metal choice (pick two close together in the series) and the area slider (make the anode large compared with the cathode).</p>
+        </div>
+        <div class="card">
+          <svg class="diagram" id="dG" viewBox="0 0 540 380" role="group" aria-label="Galvanic series in seawater"></svg>
+          <div class="row" style="justify-content:space-between;margin-top:6px">
+            <p class="hint" style="margin:0">Click a metal to put it on the <b id="slotName">left</b> electrode. The more active one becomes the anode.</p>
+            <div class="seg" role="group" aria-label="Clicking sets">
+              <button id="slotL" aria-pressed="true">Left</button><button id="slotR" aria-pressed="false">Right</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ PITTING ============ -->
+      <div id="panel-pitting" class="col" role="tabpanel" aria-labelledby="tab-pitting" hidden>
+        <div class="card ctl">
+          <div class="group"><div class="lbl">Example</div>
+            <div class="row ex" id="pEx">
+              <button class="chip" data-x="sea316">316 stainless pipe in seawater</button>
+              <button class="chip" data-x="tap304">304 stainless sink in tap water</button>
+            </div></div>
+          <div class="group"><div class="lbl">Alloy</div><div class="row" id="pAlloy"></div></div>
+          <div class="group"><div class="lbl">Water</div>
+            <div class="row" id="pEnv">
+              <button class="chip" data-e="tap">Tap water <small>~100 mg/L Cl⁻</small></button>
+              <button class="chip" data-e="sea">Seawater <small>~19,000 mg/L Cl⁻</small></button>
+            </div></div>
+          <div class="slider"><label class="lbl" for="pT">Temperature</label><input type="range" id="pT" min="5" max="80" step="1" value="20"><output id="pTout">20 °C</output></div>
+        </div>
+        <div class="card"><svg class="diagram click" id="dP" viewBox="0 0 540 340" role="img" aria-label="Pitting resistance needed against temperature"></svg>
+          <p class="hint">Below the line the passive film cannot hold and pits grow. Click on the chart to set the temperature.</p></div>
+      </div>
+
+      <!-- ============ CREVICE ============ -->
+      <div id="panel-crevice" class="col" role="tabpanel" aria-labelledby="tab-crevice" hidden>
+        <div class="card ctl">
+          <div class="group"><div class="lbl">Example</div>
+            <div class="row ex" id="cEx"><button class="chip" data-x="bolt">Stainless bolt and washer in seawater</button></div></div>
+          <div class="group"><div class="lbl">Alloy</div><div class="row" id="cAlloy"></div></div>
+          <div class="slider"><label class="lbl" for="cG">Crevice gap</label><input type="range" id="cG" min="0.3" max="2.3" step="0.01" value="1"><output id="cGout">10 µm</output></div>
+          <div class="slider"><label class="lbl" for="cT">Temperature</label><input type="range" id="cT" min="5" max="60" step="1" value="20"><output id="cTout">20 °C</output></div>
+        </div>
+        <div class="card"><svg class="diagram click" id="dC" viewBox="0 0 540 340" role="img" aria-label="Oxygen and pH inside the crevice against time"></svg>
+          <p class="hint">Time axis is logarithmic, from minutes to years. Click or drag to move through time.</p></div>
+      </div>
+
+      <!-- ============ FLOW ============ -->
+      <div id="panel-flow" class="col" role="tabpanel" aria-labelledby="tab-flow" hidden>
+        <div class="card ctl">
+          <div class="group"><div class="lbl">Example</div>
+            <div class="row ex" id="fEx">
+              <button class="chip" data-x="bend">Copper pipe bend <small>erosion-corrosion</small></button>
+              <button class="chip" data-x="prop">Ship propeller <small>cavitation</small></button>
+            </div></div>
+          <div class="slider"><label class="lbl" for="fV">Flow speed</label><input type="range" id="fV" min="0" max="25" step="0.1" value="3"><output id="fVout">3 m/s</output></div>
+          <div class="group"><div class="lbl">Alloy</div><div class="row" id="fMat"></div></div>
+          <div class="group"><div class="lbl">Make it worse / limit it</div>
+            <div class="row">
+              <button class="chip" id="fSand">Sand and bubbles in the water</button>
+              <button class="chip" id="fSmooth">Smoother shape <small>long bend, better blade</small></button>
+            </div></div>
+        </div>
+        <div class="card"><svg class="diagram click" id="dF" viewBox="0 0 540 340" role="img" aria-label="Corrosion rate against flow speed"></svg>
+          <p class="hint">The shape of the slide's "across the flow range" curve. Rate axis is logarithmic. Click on the chart to set the speed.</p></div>
+      </div>
+    </section>
+
+    <section class="col">
+      <figure class="scope card">
+        <div class="scopebar">
+          <div class="status" id="status"></div>
+          <div class="seg" role="group" aria-label="View" id="phSeg" hidden>
+            <button id="vPlain" aria-pressed="true">Plain</button><button id="vPH" aria-pressed="false">pH indicator</button>
+          </div>
+        </div>
+        <div class="canvaswrap"><canvas id="view" width="560" height="400" aria-label="Simulated view"></canvas></div>
+        <p class="note" id="viewNote"></p>
+      </figure>
+
+      <div class="card" id="ro">
+        <div class="big"><div class="T" id="roBig">–</div><div class="unit" id="roUnit"></div><div class="sub" id="roSub"></div></div>
+        <div class="stage" id="roStage"></div>
+        <p class="caption" id="roCap"></p>
+        <div class="ac" id="roAC"></div>
+        <div class="extra" id="roX"></div>
+        <div class="math" id="roMath"></div>
+        <div class="timebox" id="roTime"></div>
+      </div>
+    </section>
+  </main>
+
+  <details class="notes">
+    <summary>Model notes and assumptions</summary>
+    <p style="margin:8px 0 0">These are teaching models: each one is built to show the mechanism and the right order of magnitude. Treat any rate here as ±50 % at best.</p>
+    <h3>Uniform</h3>
+    <ul>
+      <li>Steel plate: constant rate, default 0.1 mm/yr as on the slide. Life = corrosion allowance ÷ rate. The equivalent current density comes from Faraday's law with the slide's values: M = 56 g/mol, ρ = 7900 kg/m³, z = 2, F = 96,500 C/mol.</li>
+      <li>Rebar: the slide 17 calculation with the same constants, worked without intermediate rounding (5.93 years, 2,166 days; the slide's 2,162 days comes from rounding the moles to 4.84). Real rebar corrosion is often localised (chloride pitting), which is worse than this.</li>
+      <li>Rust is drawn at 3× the volume of the steel it came from (real rust is 2–6×). That expansion is what cracks the concrete cover.</li>
+    </ul>
+    <h3>Galvanic</h3>
+    <ul>
+      <li>Potentials are typical galvanic-series values in flowing seawater (V vs saturated calomel electrode). The cell is a circuit obeying Ohm's law: <code>I = ΔE / (R_electrolyte + R_anode + R_cathode)</code>, with <code>R_electrolyte = 20 Ω·cm × 0.5 cm⁻¹</code>, <code>R_anode = 1 kΩ·cm² / A_anode</code> and <code>R_cathode = 10 kΩ·cm² / A_cathode</code> for oxygen reduction.</li>
+      <li>Rate from Faraday's law, <code>CR [mm/yr] = 3.27×10⁻³ · i [µA/cm²] · M / (n·ρ)</code>, plus the anode's own corrosion. The cathode's own corrosion is suppressed by <code>exp(−i_c / 3 µA·cm⁻²)</code>. Each electrode is a 2 mm plate; when 1 mm has gone from each face it is used up and the cell stops.</li>
+    </ul>
+    <h3>Pitting</h3>
+    <ul>
+      <li>PREN = %Cr + 3.3 %Mo + 16 %N with typical compositions: 304 (18Cr, 0.05N), 316 (17Cr, 2.1Mo, 0.05N), 2507 super duplex (25Cr, 3.8Mo, 0.27N).</li>
+      <li>The PREN needed is an indicative rule of thumb, <code>10 + 4·log₁₀[Cl⁻ mg/L] + 0.4·(T − 20 °C)</code>, chosen to agree with practice: 304 is fine in cool tap water, 316 pits in seawater, and PREN ≥ 40 is the usual requirement for seawater service.</li>
+      <li>Pit depth grows as <code>0.6 · (PREN needed − PREN) · √t</code> mm with t in years; the 3 mm pipe wall leaks when the deepest pit reaches it. Pits are drawn and sized as undercut ellipsoids (width 0.6 × depth) to get the average loss, spread over a 9 × 9 mm patch of surface.</li>
+    </ul>
+    <h3>Crevice</h3>
+    <ul>
+      <li>Oxygen inside the crevice decays with a time constant of 0.2 days × (gap / 10 µm); wide gaps (beyond about 60 µm) keep exchanging water with the outside. The crevice then acidifies about 15× more slowly towards a pH that depends on the gap and temperature.</li>
+      <li>The passive film fails below a critical pH ≈ 4.0 − 0.1 × PREN (about 2.1 for 304 and 1.5 for 316, close to published crevice-solution values). After that the attack depth grows as <code>4 · (pH_crit − pH) · √t</code> mm.</li>
+    </ul>
+    <h3>Flow</h3>
+    <ul>
+      <li>Below a critical speed the protective film survives and the rate rises only slightly as more oxygen arrives. The slide labels this region "laminar"; in real pipes flow is turbulent at almost any useful speed, and the boundary that matters is the speed at which wall shear strips the film. Critical speeds used: copper 1.5, nickel-aluminium bronze 4.5, 316 stainless 20 m/s. Sand and bubbles cut them by 40 %; a smoother shape raises them by 30 %.</li>
+      <li>Cavitation starts when the cavitation number <code>σ = (p − p_v) / (½ρv²)</code> falls below an inception value: 1.0 for a blunt shape, 0.7 for a smooth one, with p = 111 kPa (1 m under water) and p_v = 2.3 kPa. Damage then rises with v⁶, scaled by each alloy's resistance (copper 1, bronze 0.35, stainless 0.15).</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+(()=>{
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const RM=matchMedia('(prefers-reduced-motion: reduce)');
+const DAY=86400, YR=365.25*DAY;
+
+/* ---------- formatting ---------- */
+function sig(v,n=3){ if(!isFinite(v)) return '∞'; if(v===0) return '0';
+  const d=clamp(n-1-Math.floor(Math.log10(Math.abs(v))),0,6);
+  return Number(v.toFixed(d)).toLocaleString('en-GB',{minimumFractionDigits:0,maximumFractionDigits:d}); }
+const fmtI=A=>A<=0?'0':A<1e-6?sig(A*1e9)+' nA':A<1e-3?sig(A*1e6)+' µA':sig(A*1e3)+' mA';
+const fmtOhm=R=>R<1e3?sig(R)+' Ω':R<1e6?sig(R/1e3)+' kΩ':sig(R/1e6)+' MΩ';
+const fmtRate=r=>r<0.001?'< 0.001':sig(r,2);
+const fmtArea=a=>sig(a,a<1?1:2)+' cm²';
+const sci=(v,n=4)=>{const e=Math.floor(Math.log10(Math.abs(v))); const m=v/10**e; return `${m.toFixed(n-1)}×10${String(e).replace('-','⁻').replace(/\d/g,d=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[d])}`;};
+function fmtDays(d){ if(!isFinite(d)) return 'never'; if(d<1/24) return Math.max(1,Math.round(d*1440))+' min'; if(d<1) return sig(d*24,2)+' h'; if(d<550) return sig(d,2)+(Math.abs(d-1)<1e-9?' day':' days'); return sig(d/365.25,2)+' years';}
+const fr=(a,b)=>`<span class="fr"><span>${a}</span><span>${b}</span></span>`;
+const hash=i=>{i=Math.imul(i^0x9e3779b9,0x85ebca6b);i^=i>>>13;i=Math.imul(i,0xc2b2ae35);i^=i>>>16;return (i>>>0)/4294967296;};
+
+/* ---------- theme tokens for canvas ---------- */
+const TK={};
+function readTokens(){const cs=getComputedStyle(document.documentElement);
+  for(const k of ['bg','panel','ink','muted','line','grid','scene','steel','water','anode','cathode','electron','glass','chloride']) TK[k]=cs.getPropertyValue('--'+k).trim();}
+const hex2rgb=h=>{h=h.replace('#',''); const n=parseInt(h,16); return [n>>16&255,n>>8&255,n&255];};
+const rgba=(a,al)=>`rgba(${a[0]},${a[1]},${a[2]},${al})`;
+const shade=(h,f)=>`rgb(${hex2rgb(h).map(v=>clamp(Math.round(v*f),0,255)).join(',')})`;
+const UI=[[1,[214,38,30]],[3,[240,127,38]],[5,[236,190,40]],[7,[76,175,80]],[9,[43,132,198]],[11,[75,58,168]],[13,[107,42,138]]];
+function uiCol(pH){pH=clamp(pH,1,13); for(let i=0;i<UI.length-1;i++){const a=UI[i],b=UI[i+1]; if(pH<=b[0]){const f=(pH-a[0])/(b[0]-a[0]); return a[1].map((v,j)=>Math.round(v+(b[1][j]-v)*f));}} return UI[6][1];}
+const SEA=[132,190,190], TAP=[186,220,230];
+
+/* ---------- canvas ---------- */
+const cv=$('#view'), ctx=cv.getContext('2d'); const W=560,H=400;
+function sizeCanvas(){const dpr=Math.min(2,window.devicePixelRatio||1); cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);}
+let CLK=0; // animation clock, seconds
+const FONT={lab:'600 12px "IBM Plex Mono", monospace', sm:'500 11px "IBM Plex Mono", monospace', body:'500 12.5px "Barlow", sans-serif', head:'700 13px "Barlow Semi Condensed", "Arial Narrow", sans-serif'};
+function txt(s,x,y,col,font,align='left'){ctx.fillStyle=col; ctx.font=font; ctx.textAlign=align; ctx.fillText(s,x,y);}
+function ion(x,y,kind,al=1){ const c=ctx; c.globalAlpha=al; const col=kind==='+'?TK.anode:kind==='cl'?TK.chloride:TK.cathode;
+  c.fillStyle=col; c.beginPath(); c.arc(x,y,4.4,0,Math.PI*2); c.fill(); c.strokeStyle='#fff'; c.lineWidth=1.4; c.beginPath(); c.moveTo(x-2.3,y); c.lineTo(x+2.3,y); if(kind==='+'){c.moveTo(x,y-2.3); c.lineTo(x,y+2.3);} c.stroke(); c.globalAlpha=1;}
+function o2(x,y,al=1){ctx.globalAlpha=al; ctx.strokeStyle=TK.cathode; ctx.lineWidth=1.3; ctx.beginPath(); ctx.arc(x-2.2,y,2.4,0,Math.PI*2); ctx.arc(x+2.6,y,2.4,0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1;}
+function legend(items,y=H-8){let x=12; ctx.font=FONT.body; ctx.textAlign='left';
+  for(const [kind,label] of items){ if(kind==='o2') o2(x+5,y-4); else if(kind==='e'){ctx.fillStyle=TK.electron; ctx.beginPath(); ctx.arc(x+4,y-4,3.2,0,Math.PI*2); ctx.fill();} else ion(x+4,y-4,kind);
+    ctx.fillStyle=TK.muted; ctx.fillText(label,x+14,y); x+=ctx.measureText(label).width+32;}}
+
+/* ---------- SVG helpers ---------- */
+const SVGNS='http://www.w3.org/2000/svg';
+function el(tag,attrs,parent,text){const e=document.createElementNS(SVGNS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;if(parent)parent.appendChild(e);return e;}
+function axes(svg,o){
+  const lx=v=>o.xlog?Math.log10(v):v, ly=v=>o.ylog?Math.log10(v):v;
+  const X=v=>o.ml+(lx(v)-lx(o.x0))/(lx(o.x1)-lx(o.x0))*(o.w-o.ml-o.mr);
+  const Y=v=>o.h-o.mb-(ly(v)-ly(o.y0))/(ly(o.y1)-ly(o.y0))*(o.h-o.mt-o.mb);
+  const invX=px=>{const f=clamp((px-o.ml)/(o.w-o.ml-o.mr),0,1); const v=lx(o.x0)+f*(lx(o.x1)-lx(o.x0)); return o.xlog?10**v:v;};
+  for(const [v,l] of o.yt){el('line',{x1:o.ml,x2:o.w-o.mr,y1:Y(v),y2:Y(v),class:'gl'},svg); el('text',{x:o.ml-6,y:Y(v)+3.5,'text-anchor':'end',class:'tick'},svg,l);}
+  for(const [v,l] of o.xt){el('line',{x1:X(v),x2:X(v),y1:o.h-o.mb,y2:o.h-o.mb+4,class:'ax'},svg); el('text',{x:X(v),y:o.h-o.mb+16,'text-anchor':'middle',class:'tick'},svg,l);}
+  el('line',{x1:o.ml,x2:o.w-o.mr,y1:o.h-o.mb,y2:o.h-o.mb,class:'ax'},svg); el('line',{x1:o.ml,x2:o.ml,y1:o.mt,y2:o.h-o.mb,class:'ax'},svg);
+  el('text',{x:(o.ml+o.w-o.mr)/2,y:o.h-6,'text-anchor':'middle',class:'tick'},svg,o.xl);
+  const yc=(o.mt+o.h-o.mb)/2; el('text',{x:13,y:yc,'text-anchor':'middle',class:'tick',transform:`rotate(-90 13 ${yc})`},svg,o.yl);
+  return {X,Y,invX,o};
+}
+const poly=(pts,X,Y)=>pts.map(p=>`${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(' ');
+function clickable(svg,getAx,set){let drag=false; const go=ev=>{const ax=getAx(); if(!ax) return; const r=svg.getBoundingClientRect(); set(ax.invX((ev.clientX-r.left)/r.width*ax.o.w));};
+  svg.addEventListener('pointerdown',ev=>{drag=true; svg.setPointerCapture(ev.pointerId); stop(); go(ev);});
+  svg.addEventListener('pointermove',ev=>{if(drag) go(ev);}); svg.addEventListener('pointerup',()=>drag=false); svg.addEventListener('pointercancel',()=>drag=false);}
+
+/* ---------- readout helpers ---------- */
+function setRO(o){ $('#roBig').textContent=o.big; $('#roUnit').textContent=o.unit||''; $('#roSub').textContent=o.sub||'';
+  $('#roStage').textContent=o.stage; $('#roCap').textContent=o.cap; $('#roAC').innerHTML=o.ac.map(([k,v,c])=>`<span class="k"${c?` style="color:${c}"`:''}>${k}</span><span>${v}</span>`).join('');
+  $('#roX').innerHTML=o.extra||''; $('#roMath').innerHTML=o.math; $('#roTime').innerHTML=o.time||''; $('#roTime').hidden=!o.time; }
+const eq=(...p)=>`<div class="eq">${p.join(' ')}</div>`;
+const why=s=>`<span class="why">${s}</span>`;
+const res=s=>`<span class="res">${s}</span>`;
+function stackBar(items,head){const tot=items.reduce((s,i)=>s+i.v,0)||1;
+  return `<div class="barhead"><span>${head[0]}</span><span>${head[1]||''}</span></div><div class="stack">${items.filter(i=>i.v>0).map(i=>`<i style="width:${i.v/tot*100}%;background:${i.c}" title="${i.n}"></i>`).join('')}</div><div class="legend">${items.map(i=>`<span><i class="sw" style="background:${i.c}"></i>${i.n} <em>${i.t}</em></span>`).join('')}</div>`;}
+function alloyChips(box,onPick){ $(box).innerHTML=Object.entries(ALLOYS).map(([k,a])=>`<button class="chip" data-a="${k}">${a.short} <small>PREN ${sig(prenOf(a),3)}</small></button>`).join('');
+  $$(box+' .chip').forEach(b=>b.addEventListener('click',()=>onPick(b.dataset.a)));}
+const press=(sel,pred)=>$$(sel).forEach(b=>b.setAttribute('aria-pressed',!!pred(b)));
+
+/* ===================================================================== UNIFORM */
+const FA={M:0.056,rho:7900,z:2,F:96500};
+const UNI={ex:'plate',r:0.1,allow:3,TH:10,I:5,D0:10,L:1,frac:0.75,t:12};
+function uniCalc(){const u=UNI;
+  if(u.ex==='plate'){const life=u.allow/u.r; const i=(u.r/1000)*FA.rho*FA.z*FA.F/(FA.M*YR); return {life,i,loss:Math.min(u.TH,u.r*u.t),tmax:40};}
+  const D0=u.D0/1000, Dmin=u.frac*D0, dV=Math.PI*u.L*(D0*D0-Dmin*Dmin)/4, m=FA.rho*dV, n=m/FA.M, Q=FA.z*FA.F*n, I=u.I/1000, tf=Q/I;
+  const Dat=t=>{const V=Math.PI*u.L*D0*D0/4-I*t*YR/(FA.z*FA.F)*FA.M/FA.rho; return V>0?Math.sqrt(4*V/(Math.PI*u.L))*1000:0;};
+  return {D0,Dmin,dV,m,n,Q,I,tf,tfy:tf/YR,days:tf/DAY,Dat,D:Dat(u.t),mlost:I*u.t*YR/(FA.z*FA.F)*FA.M*1000,tmax:10};}
+let axU=null;
+function drawDU(c){const svg=$('#dU'); svg.innerHTML=''; const u=UNI;
+  if(u.ex==='plate'){
+    const ax=axU=axes(svg,{w:540,h:340,ml:52,mr:20,mt:16,mb:44,x0:0,x1:40,y0:0,y1:10,xt:[0,10,20,30,40].map(v=>[v,v]),yt:[0,2,4,6,8,10].map(v=>[v,v]),xl:'Years in service',yl:'Plate thickness, mm'});
+    const tmin=u.TH-u.allow; el('rect',{x:ax.X(0),y:ax.Y(tmin),width:ax.X(40)-ax.X(0),height:ax.Y(0)-ax.Y(tmin),fill:'var(--cathode-soft)'},svg);
+    el('line',{x1:ax.X(0),x2:ax.X(40),y1:ax.Y(tmin),y2:ax.Y(tmin),stroke:'var(--anode)','stroke-dasharray':'5 4','stroke-width':1.5},svg);
+    el('text',{x:ax.X(39.5),y:ax.Y(tmin)+14,'text-anchor':'end',style:'font-size:11px;fill:var(--anode)'},svg,`minimum for strength, ${sig(tmin,2)} mm`);
+    el('polyline',{points:poly([[0,u.TH],[40,Math.max(0,u.TH-u.r*40)]],ax.X,ax.Y),fill:'none',stroke:'var(--ink)','stroke-width':2.4},svg);
+    if(c.life<=40){el('circle',{cx:ax.X(c.life),cy:ax.Y(tmin),r:6,fill:'none',stroke:'var(--anode)','stroke-width':2},svg);
+      el('text',{x:ax.X(c.life)+(c.life>30?-9:9),y:ax.Y(tmin)-9,'text-anchor':c.life>30?'end':'start',style:'font-size:11.5px;font-weight:600'},svg,`allowance used, year ${sig(c.life,3)}`);}
+    el('line',{x1:ax.X(u.t),x2:ax.X(u.t),y1:16,y2:340-44,stroke:'var(--ink)','stroke-dasharray':'2 3'},svg);
+    el('circle',{cx:ax.X(u.t),cy:ax.Y(u.TH-c.loss),r:5,fill:'var(--anode)',stroke:'var(--panel)','stroke-width':2},svg);
+  } else {
+    const ax=axU=axes(svg,{w:540,h:340,ml:52,mr:20,mt:16,mb:44,x0:0,x1:10,y0:0,y1:10,xt:[0,2,4,6,8,10].map(v=>[v,v]),yt:[0,2,4,6,8,10].map(v=>[v,v]),xl:'Years',yl:'Bar diameter, mm'});
+    el('line',{x1:ax.X(0),x2:ax.X(10),y1:ax.Y(7.5),y2:ax.Y(7.5),stroke:'var(--anode)','stroke-dasharray':'5 4','stroke-width':1.5},svg);
+    el('text',{x:ax.X(9.9),y:ax.Y(7.5)+14,'text-anchor':'end',style:'font-size:11px;fill:var(--anode)'},svg,'¾ of original diameter: too weak');
+    const pts=[]; for(let t=0;t<=10.0001;t+=0.05) pts.push([t,c.Dat(t)]);
+    el('polyline',{points:poly(pts,ax.X,ax.Y),fill:'none',stroke:'var(--ink)','stroke-width':2.4},svg);
+    if(c.tfy<=10){el('circle',{cx:ax.X(c.tfy),cy:ax.Y(7.5),r:6,fill:'none',stroke:'var(--anode)','stroke-width':2},svg);
+      el('text',{x:ax.X(c.tfy)+(c.tfy>7?-9:9),y:ax.Y(7.5)-9,'text-anchor':c.tfy>7?'end':'start',style:'font-size:11.5px;font-weight:600'},svg,`too weak at ${sig(c.tfy,3)} years`);}
+    el('line',{x1:ax.X(u.t),x2:ax.X(u.t),y1:16,y2:340-44,stroke:'var(--ink)','stroke-dasharray':'2 3'},svg);
+    el('circle',{cx:ax.X(u.t),cy:ax.Y(c.D),r:5,fill:'var(--anode)',stroke:'var(--panel)','stroke-width':2},svg);
+  }}
+// random anode/cathode sites that keep moving
+function siteAt(k){const per=0.5+hash(k*7)*0.9; const cyc=Math.floor((CLK+hash(k*13)*per)/per); const ph=((CLK+hash(k*13)*per)/per)%1; return {u:hash(k*101+cyc*7919), an:hash(k*31+cyc*17)<0.5, ph};}
+function drawUniform(){const c=ctx, u=UNI, k=uniCalc(); c.clearRect(0,0,W,H);
+  if(u.ex==='plate'){
+    c.fillStyle=TK.scene; c.fillRect(0,0,W,H);
+    const Y0=128, PX=22, loss=k.loss*PX, sy=x=>Y0+loss+1.4*Math.sin(x/23)+0.9*Math.sin(x/7.3+1);
+    c.fillStyle=rgba(SEA,.55); c.fillRect(0,0,W,Y0+loss+3);
+    // rust product
+    const rust=Math.min(14,3+k.loss*8);
+    for(let x=0;x<W;x+=2){const h=rust*(0.6+0.4*hash(x*3+7)); c.fillStyle=shade('#9c4a1c',0.8+0.35*hash(x*11)); c.fillRect(x,sy(x)-h,2,h);}
+    c.fillStyle=TK.steel; c.beginPath(); c.moveTo(0,sy(0)); for(let x=0;x<=W;x+=4) c.lineTo(x,sy(x)); c.lineTo(W,Y0+u.TH*PX); c.lineTo(0,Y0+u.TH*PX); c.closePath(); c.fill();
+    c.strokeStyle=TK.ink; c.setLineDash([6,4]); c.lineWidth=1; c.beginPath(); c.moveTo(0,Y0); c.lineTo(W,Y0); c.stroke();
+    c.strokeStyle=TK.anode; c.lineWidth=1.5; c.beginPath(); c.moveTo(0,Y0+u.allow*PX); c.lineTo(W,Y0+u.allow*PX); c.stroke(); c.setLineDash([]);
+    txt('original surface',W-10,Y0-6,TK.ink,FONT.sm,'right');
+    txt(`corrosion allowance ${sig(u.allow,2)} mm`,W-10,Y0+u.allow*PX-6,'#fff',FONT.sm,'right');
+    txt(`steel plate, ${u.TH} mm`,14,Y0+u.TH*PX-10,'rgba(255,255,255,.85)',FONT.body);
+    txt('seawater',14,22,TK.ink,FONT.lab);
+    // sites
+    for(let j=0;j<26;j++){const s=siteAt(j); const x=10+s.u*(W-20), y=sy(x); const al=Math.sin(Math.PI*s.ph);
+      c.globalAlpha=al; c.fillStyle=s.an?TK.anode:TK.cathode; c.fillRect(x-6,y-1.5,12,3); c.globalAlpha=1;
+      ion(x+(s.an?0:3),y-rust-8-s.ph*40,s.an?'+':'-',al*0.9);}
+    c.fillStyle='rgba(0,0,0,.25)'; c.fillRect(0,Y0+u.TH*PX,W,H-Y0-u.TH*PX);
+    c.fillStyle='#fff'; c.fillRect(W-120,H-34,PX*5,3); txt('5 mm',W-120+PX*2.5,H-40,'#fff',FONT.sm,'center');
+    legend([['+','Fe²⁺ (anode site)'],['-','OH⁻ (cathode site)']],H-12);
+  } else {
+    // concrete
+    c.fillStyle='#c9c5bc'; c.fillRect(0,0,W,H);
+    for(let j=0;j<260;j++){const x=hash(j*3)*W, y=40+hash(j*5)*(H-40), r=1.5+hash(j*7)*4; c.fillStyle=shade('#9d978c',0.8+0.4*hash(j*9)); c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.fill();}
+    c.fillStyle=TK.scene; c.fillRect(0,0,W,40); txt('concrete surface',12,32,TK.ink,FONT.lab);
+    const cx=280, cy=225, PX=14, r0=u.D0/2, r=k.D/2, Rout=Math.sqrt(r*r+3*(r0*r0-r*r));
+    // cracks driven by rust expansion
+    const grow=Math.min(1,(Rout-r0)/0.6);
+    if(Rout>r0+0.005){c.strokeStyle='#3b3833'; c.lineWidth=1.6;
+      for(const [ang,len] of [[-90,cy-40-Rout*PX],[-35,150],[205,140],[140,120],[25,160]]){const L=len*grow; const a=ang*Math.PI/180; c.beginPath(); let x=cx+Math.cos(a)*Rout*PX, y=cy+Math.sin(a)*Rout*PX; c.moveTo(x,y);
+        for(let s=0;s<L;s+=8){x+=Math.cos(a)*8+(hash(s+ang*3)-.5)*5; y+=Math.sin(a)*8+(hash(s*7+ang)-.5)*5; c.lineTo(x,y);} c.stroke();}
+      if(grow>=1){c.fillStyle='rgba(156,74,28,.55)'; c.beginPath(); c.ellipse(cx,40,26,5,0,0,Math.PI*2); c.fill(); txt('rust stain and spalling',cx+34,58,'#3b3833',FONT.sm);}}
+    c.fillStyle='#9c4a1c'; c.beginPath(); c.arc(cx,cy,Rout*PX,0,Math.PI*2); c.fill();
+    for(let j=0;j<120;j++){const a=hash(j)*Math.PI*2, rr=(r+(Rout-r)*hash(j*5))*PX; c.fillStyle=shade('#9c4a1c',0.75+0.5*hash(j*3)); c.fillRect(cx+Math.cos(a)*rr-1,cy+Math.sin(a)*rr-1,2.5,2.5);}
+    c.fillStyle='#6f777c'; c.beginPath(); c.arc(cx,cy,r*PX,0,Math.PI*2); c.fill();
+    c.strokeStyle=TK.ink; c.setLineDash([5,4]); c.lineWidth=1; c.beginPath(); c.arc(cx,cy,r0*PX,0,Math.PI*2); c.stroke(); c.setLineDash([]);
+    for(let j=0;j<16;j++){const s=siteAt(j+50); const a=s.u*Math.PI*2, al=Math.sin(Math.PI*s.ph); c.globalAlpha=al; c.strokeStyle=s.an?TK.anode:TK.cathode; c.lineWidth=3; c.beginPath(); c.arc(cx,cy,r*PX-1.5,a-0.08,a+0.08); c.stroke(); c.globalAlpha=1;}
+    txt(`steel, ${sig(k.D,3)} mm`,cx,cy+5,'#fff',FONT.lab,'center');
+    txt('original 10 mm',cx+r0*PX+8,cy-r0*PX+4,TK.ink,FONT.sm);
+    if(Rout-r>0.05) txt('rust',cx-Rout*PX-8,cy+4,'#3b3833',FONT.lab,'right');
+    c.fillStyle='#262626'; c.fillRect(24,H-22,PX*5,3); txt('5 mm',24+PX*2.5,H-28,'#262626',FONT.sm,'center');
+  }}
+function updUniform(){const u=UNI, k=uniCalc();
+  press('#uEx .chip',b=>b.dataset.x===u.ex); $('#uPlateCtl').hidden=u.ex!=='plate'; $('#uBarCtl').hidden=u.ex!=='rebar';
+  $('#uR').value=Math.log10(u.r); $('#uRout').textContent=sig(u.r,2)+' mm/yr'; $('#uA').value=u.allow; $('#uAout').textContent=sig(u.allow,2)+' mm';
+  $('#uI').value=Math.log10(u.I); $('#uIout').textContent=sig(u.I,2)+' mA';
+  drawDU(k);
+  const ac=[['Anode','Everywhere, at random spots that keep moving',TK.anode],['Cathode','Everywhere in between',TK.cathode],['Result','The whole surface thins evenly, so the rate can be measured and designed for']];
+  if(u.ex==='plate'){
+    const iA=k.i, iu=iA*100; // µA/cm²
+    setRO({big:sig(k.life,3),unit:'years',sub:`to use a ${sig(u.allow,2)} mm allowance at ${sig(u.r,2)} mm/yr`,stage:'Uniform attack: predictable, so design for it',
+      cap:'Oxidation and reduction happen at random points that keep moving, so no spot loses more than any other. Because the rate is steady and measurable, the designer adds a corrosion allowance: extra thickness equal to rate × design life.',ac,
+      math:eq('Life =',fr('allowance','rate'),'=',fr(sig(u.allow,2)+' mm',sig(u.r,2)+' mm/yr'),'=',res(sig(k.life,3)+' years'))+
+        eq('Same rate as a current density (Faraday):')+
+        eq('i =',fr('rate × ρ × z × F','M × 1 year'),'=',fr(`${sig(u.r/1000,2)} m × 7900 × 2 × 96,500`,'0.056 × 3.156×10⁷ s'),'=',res(sig(iA,3)+' A/m²'),why(`= ${sig(iu,3)} µA/cm²`)),
+      time:`After <b>${sig(u.t,3)} yr</b>: <b>${sig(k.loss,2)} mm</b> lost; <b>${sig(u.TH-k.loss,3)} mm</b> of plate left.`+(u.t>=k.life?' The allowance is used up: the plate is now below its design thickness.':'')});
+  } else {
+    setRO({big:sig(k.tfy,3),unit:'years',sub:`${sig(u.I,2)} mA in a 10 mm bar · ${Math.round(k.days).toLocaleString('en-GB')} days`,stage:'Rebar: too weak once down to ¾ of its diameter',
+      cap:'The bar corrodes evenly all round. Rust takes up about three times the volume of the steel it came from, so it presses on the concrete, cracks the cover and lets more water and chloride in.',ac,
+      math:eq('Work back from the unknown:')+
+        eq('t =',fr('Q','I'),why('need Q'))+eq('Q = z F n',why('need n, the moles of iron lost'))+eq('n =',fr('m','M'),why('need m'))+eq('m = ρ ΔV',why('need ΔV'))+
+        eq('ΔV =',fr('π L (D₀² − D<sub>min</sub>²)','4'),'=',fr('π × 1 × (0.010² − 0.0075²)','4'),'=',res(sci(k.dV)+' m³'))+
+        eq('m = 7900 × ',sci(k.dV),'=',res(sig(k.m,4)+' kg'))+eq('n =',fr(sig(k.m,4)+' kg','0.056 kg/mol'),'=',res(sig(k.n,4)+' mol'))+
+        eq('Q = 2 × 96,500 × ',sig(k.n,4),'=',res(sci(k.Q)+' C'))+
+        eq('t =',fr(sci(k.Q)+' C',sig(u.I/1000,2)+' A'),'=',res(sci(k.tf)+' s'),why(`= ${Math.round(k.days).toLocaleString('en-GB')} days = ${sig(k.tfy,3)} years`)),
+      time:`After <b>${sig(u.t,3)} yr</b>: diameter <b>${sig(k.D,3)} mm</b>, <b>${sig(k.mlost,3)} g</b> of steel turned to rust.`+(u.t>=k.tfy?' The bar is now too weak.':'')});
+  }
+  $('#status').innerHTML=`${u.ex==='plate'?'Cross-section of a plate':'Cross-section of a bar in concrete'} · <b>year ${sig(u.t,3)}</b>`;
+  $('#viewNote').textContent=u.ex==='plate'?'Coloured marks on the surface are anode (orange) and cathode (blue) sites. They keep moving, which is why the loss is even.':'Rust ring drawn at 3× the volume of the steel lost. The cracks open as it expands.';
+}
+const MU={key:'uniform',get t(){return UNI.t;},set t(v){UNI.t=v;},tMax:()=>UNI.ex==='plate'?40:10,toU(t){return t/this.tMax();},fromU(u){return u*this.tMax();},label:t=>'year '+sig(t,t<10?2:3),dur:10,upd:updUniform,draw:drawUniform,anim:true};
+
+/* ===================================================================== GALVANIC */
+const F=96485, YEAR=3.156e7;
+const METALS=[
+ {id:'mg',name:'Magnesium',E:-1.615,lo:-1.63,hi:-1.60,M:24.31,n:2,rho:1.74,free:0.5,col:'#cdcfc6',prod:'#ecece4',ion:'Mg²⁺',rx:'Mg → Mg²⁺ + 2e⁻'},
+ {id:'zn',name:'Zinc',E:-1.005,lo:-1.03,hi:-0.98,M:65.38,n:2,rho:7.13,free:0.03,col:'#a5b2b9',prod:'#eceee6',ion:'Zn²⁺',rx:'Zn → Zn²⁺ + 2e⁻'},
+ {id:'al',name:'Aluminium alloy',E:-0.87,lo:-1.00,hi:-0.76,M:26.98,n:3,rho:2.70,free:0.01,col:'#c3c8cb',prod:'#efefe9',ion:'Al³⁺',rx:'Al → Al³⁺ + 3e⁻'},
+ {id:'fe',name:'Mild steel',E:-0.65,lo:-0.72,hi:-0.60,M:55.85,n:2,rho:7.87,free:0.12,col:'#6f777c',prod:'#ad5520',ion:'Fe²⁺',rx:'Fe → Fe²⁺ + 2e⁻'},
+ {id:'cu',name:'Copper',E:-0.33,lo:-0.36,hi:-0.30,M:63.55,n:2,rho:8.96,free:0.03,col:'#c0703f',prod:'#4f9a7c',ion:'Cu²⁺',rx:'Cu → Cu²⁺ + 2e⁻'},
+ {id:'ss',name:'Stainless steel 316',E:-0.05,lo:-0.10,hi:0.00,M:55.9,n:2,rho:8.0,free:0.001,col:'#d5dce0',prod:'#ad5520',ion:'Fe²⁺',rx:'Fe → Fe²⁺ + 2e⁻'},
+];
+const MI=Object.fromEntries(METALS.map(m=>[m.id,m]));
+const R_SOL=20*0.5, R_A=1000, R_C=1e4, I_PROT=3;
+const GSC={alarm:{L:'fe',R:'cu',AR:1000},cp:{L:'zn',R:'fe',AR:100}};
+const GAL={L:'fe',R:'cu',AR:1000,post:'none',t:0.2,slot:'L'};
+const kFar=m=>3.27e-3*m.M/(m.n*m.rho);
+function cell(s,gone={}){
+  const r={}, mL=MI[s.L], mR=MI[s.R];
+  r.same=s.L===s.R; r.anSide=mL.E<=mR.E?'L':'R'; r.caSide=r.anSide==='L'?'R':'L';
+  r.an=r.anSide==='L'?mL:mR; r.ca=r.caSide==='L'?mL:mR;
+  const area={L:10,R:s.AR}; r.Aa=area[r.anSide]; r.Ac=area[r.caSide];
+  r.dE=r.same?0:r.ca.E-r.an.E; r.gone=gone;
+  r.presAn=gone[r.anSide]==null; r.presCa=gone[r.caSide]==null; r.pres={[r.anSide]:r.presAn,[r.caSide]:r.presCa};
+  r.wire=s.post!=='washer';
+  r.Ra=R_A/r.Aa; r.Rc=R_C/r.Ac; r.R=R_SOL+r.Ra+r.Rc;
+  r.live=r.presAn&&r.presCa&&r.wire&&!r.same;
+  r.I=r.live?r.dE/r.R:0; r.iA=r.I*1e6/r.Aa; r.iC=r.I*1e6/r.Ac;
+  r.galv=r.iA*kFar(r.an);
+  r.freeA=r.presAn?r.an.free:0; r.freeC0=r.presCa?r.ca.free:0;
+  r.prot=r.live?Math.exp(-r.iC/I_PROT):1;
+  r.rateA=r.freeA+r.galv; r.rateC=r.freeC0*r.prot;
+  r.rate={[r.anSide]:r.rateA,[r.caSide]:r.rateC}; r.free={[r.anSide]:r.freeA,[r.caSide]:r.freeC0};
+  r.mdot=r.I*r.an.M/(r.an.n*F)*YEAR;
+  r.sG=r.live?clamp((Math.log10(r.I)+8)/6,0,1):0;
+  return r;
+}
+function cellAt(s,t){
+  const gone={}, loss={L:0,R:0}; let t0=0, r;
+  for(let k=0;k<3;k++){ r=cell(s,{...gone}); let tn=Infinity, sn=null;
+    for(const sd of ['L','R']){ const pres=sd===r.anSide?r.presAn:r.presCa; const rt=r.rate[sd]; if(!pres||!(rt>0)) continue; const tt=t0+(1-loss[sd])/rt; if(tt<tn){tn=tt;sn=sd;} }
+    if(tn>t){ for(const sd of ['L','R']) loss[sd]+=(r.rate[sd]||0)*(t-t0); break; }
+    for(const sd of ['L','R']) loss[sd]+=(r.rate[sd]||0)*(tn-t0); loss[sn]=1; gone[sn]=tn; t0=tn; if(k===2) r=cell(s,{...gone}); }
+  r.loss=loss; return r;
+}
+const goneKey=r=>Object.keys(r.gone).sort().join();
+let R1=null;
+// galvanic series diagram
+const SV={w:540,h:380,ml:182,mr:18,mt:34,mb:74,emin:-1.8,emax:0.2};
+const SX=E=>SV.ml+(E-SV.emin)/(SV.emax-SV.emin)*(SV.w-SV.ml-SV.mr);
+function drawSeries(){
+  const svg=$('#dG'); svg.innerHTML=''; const r=R1;
+  const rows=[...METALS].sort((a,b)=>b.E-a.E), rh=(SV.h-SV.mt-SV.mb)/rows.length;
+  for(let k=-9;k<=1;k++){const E=k/5, x=SX(E); el('line',{x1:x,x2:x,y1:SV.mt,y2:SV.h-SV.mb,class:'gl'},svg); if(k%2===0) el('text',{x,y:SV.h-SV.mb+16,'text-anchor':'middle',class:'tick'},svg,(E<0?'−':'')+Math.abs(E).toFixed(1));}
+  el('line',{x1:SV.ml,x2:SV.w-SV.mr,y1:SV.h-SV.mb,y2:SV.h-SV.mb,class:'ax'},svg);
+  el('text',{x:(SV.ml+SV.w-SV.mr)/2,y:SV.h-SV.mb+32,'text-anchor':'middle',class:'tick'},svg,'Potential in seawater, V vs SCE');
+  el('text',{x:SV.ml,y:SV.mt-14,class:'tick',style:'fill:var(--anode)'},svg,'← active: corrodes');
+  el('text',{x:SV.w-SV.mr,y:SV.mt-14,'text-anchor':'end',class:'tick',style:'fill:var(--cathode)'},svg,'noble: protected →');
+  const roleOf=id=>{ if(r.same&&id===GAL.L) return 'same'; if(!r.same&&id===r.an.id) return 'an'; if(!r.same&&id===r.ca.id) return 'ca'; return null;};
+  rows.forEach((m,i)=>{
+    const y=SV.mt+(i+0.5)*rh, role=roleOf(m.id); const colr=role==='an'?'var(--anode)':role==='ca'?'var(--cathode)':role==='same'?'var(--ink)':'var(--muted)';
+    const g=el('g',{class:'mrow',tabindex:0,role:'button','aria-label':`${m.name}, ${m.E.toFixed(2)} V. Put on the ${GAL.slot==='L'?'left':'right'} electrode`},svg);
+    el('rect',{class:'hit',x:0,y:y-rh/2+1,width:SV.w,height:rh-2,rx:4,fill:role?(role==='an'?'var(--anode-soft)':role==='ca'?'var(--cathode-soft)':'var(--grid)'):'transparent'},g);
+    const tags=[]; if(GAL.L===m.id) tags.push('L'); if(GAL.R===m.id) tags.push('R');
+    tags.forEach((tg,j)=>{const tx=14+j*20; el('rect',{x:tx-8,y:y-8,width:16,height:16,rx:3,fill:colr},g); el('text',{x:tx,y:y+4,'text-anchor':'middle',style:'fill:var(--panel);font-size:11px;font-weight:600'},g,tg);});
+    el('text',{x:SV.ml-10,y:y+4.5,'text-anchor':'end',class:'nm',style:role?`fill:${colr};font-weight:600`:''},g,m.name);
+    el('rect',{x:SX(m.lo),y:y-6,width:Math.max(4,SX(m.hi)-SX(m.lo)),height:12,rx:3,fill:role?colr:'var(--line)'},g);
+    el('line',{x1:SX(m.E),x2:SX(m.E),y1:y-9,y2:y+9,stroke:role?colr:'var(--muted)','stroke-width':2},g);
+    const act=()=>{GAL[GAL.slot]=m.id; setSlot(GAL.slot==='L'?'R':'L'); gParts=[]; updGalvanic();};
+    g.addEventListener('click',act); g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act();}});
+  });
+  if(!r.same){const xa=SX(r.an.E), xc=SX(r.ca.E), y=SV.h-SV.mb+52;
+    el('line',{x1:xa,x2:xa,y1:SV.mt,y2:SV.h-SV.mb,stroke:'var(--anode)','stroke-dasharray':'3 3'},svg);
+    el('line',{x1:xc,x2:xc,y1:SV.mt,y2:SV.h-SV.mb,stroke:'var(--cathode)','stroke-dasharray':'3 3'},svg);
+    el('line',{x1:xa,x2:xc,y1:y,y2:y,stroke:'var(--ink)','stroke-width':1.5},svg);
+    el('line',{x1:xa,x2:xa,y1:y-6,y2:y+6,stroke:'var(--anode)','stroke-width':1.5},svg); el('line',{x1:xc,x2:xc,y1:y-6,y2:y+6,stroke:'var(--cathode)','stroke-width':1.5},svg);
+    const mid=(xa+xc)/2, wide=Math.abs(xc-xa)>96;
+    el('text',{x:wide?mid:Math.max(xa,xc)+8,y:y+(wide?-6:4),'text-anchor':wide?'middle':'start',style:'font-size:12px;font-weight:600'},svg,`ΔE = ${r.dE.toFixed(2)} V`);}
+  else el('text',{x:SX(r.an.E)+8,y:SV.h-SV.mb+56,style:'font-size:12px;font-weight:600'},svg,'ΔE = 0 V: same metal');
+}
+function setSlot(s){GAL.slot=s; $('#slotL').setAttribute('aria-pressed',s==='L'); $('#slotR').setAttribute('aria-pressed',s==='R'); $('#slotName').textContent=s==='L'?'left':'right';}
+// galvanic scene
+const BK={x0:52,x1:508,top:116,liq:146,bot:384}, ELX={L:168,R:392}, TOPY=66, WY=30, PLATE=18;
+const immH=A=>46+44*Math.log10(A/0.1);
+let gParts=[], ePhase=0, gAcc={};
+function plateGeom(side,r){const A=side==='L'?10:GAL.AR, h=immH(A), cx=ELX[side]; const loss=r.loss[side]; return {cx,h,w:PLATE*clamp(1-loss,0,1),loss,perf:r.gone[side]!=null};}
+function gSpawn(side,type,n,r){const g=plateGeom(side,r); if(g.perf) return;
+  for(let i=0;i<n&&gParts.length<240;i++){const face=Math.random()<0.5?-1:1, y=BK.liq+6+Math.random()*(g.h-10), x=g.cx+face*(Math.max(g.w,4)/2+2), life=2.2+Math.random()*1.6;
+    gParts.push({x,y,vx:face*(14+Math.random()*24),vy:(Math.random()-.5)*10,life,max:life,type});}}
+function gEmit(key,side,type,rate,dt,r){gAcc[key]=(gAcc[key]||0)+rate*dt; const n=Math.floor(gAcc[key]); if(n>0){gAcc[key]-=n; gSpawn(side,type,n,r);}}
+function gStep(dt,r){
+  if(r.live){gEmit('ga',r.anSide,'+',4+40*r.sG,dt,r); gEmit('gc',r.caSide,'-',4+40*r.sG,dt,r);}
+  for(const side of ['L','R']){ if(!r.pres[side]) continue; const fr0=r.free[side]*(side===r.caSide&&r.live?r.prot:1); if(fr0<=0) continue;
+    const sF=clamp((Math.log10(fr0)+3.3)/3,0,1)*7; gEmit('f'+side+'c',side,'+',sF,dt,r); gEmit('f'+side+'o',side,'-',sF,dt,r);}
+  const lb={x0:BK.x0+6,x1:BK.x1-6,y0:BK.liq+3,y1:BK.bot-5};
+  for(const p of gParts){p.life-=dt; p.vx+=(Math.random()-.5)*40*dt; p.vy+=(Math.random()-.5)*40*dt; p.vx*=0.985; p.vy*=0.985; p.x+=p.vx*dt; p.y+=p.vy*dt;
+    if(p.x<lb.x0||p.x>lb.x1) p.vx*=-1; p.x=clamp(p.x,lb.x0,lb.x1); if(p.y>lb.y1||p.y<lb.y0) p.vy*=-1; p.y=clamp(p.y,lb.y0,lb.y1);}
+  gParts=gParts.filter(p=>p.life>0); ePhase=(ePhase+dt*(r.live?0.05+0.35*r.sG:0))%1;}
+function beakerPath(c,ytop,open){const {x0,x1,bot}=BK, rr=18; c.beginPath(); c.moveTo(x0,ytop); c.lineTo(x0,bot-rr); c.quadraticCurveTo(x0,bot,x0+rr,bot); c.lineTo(x1-rr,bot); c.quadraticCurveTo(x1,bot,x1,bot-rr); c.lineTo(x1,ytop); if(!open) c.closePath();}
+function alongPath(pts,s){const segs=[]; let L=0; for(let i=0;i<pts.length-1;i++){const d=Math.hypot(pts[i+1][0]-pts[i][0],pts[i+1][1]-pts[i][1]); segs.push(d); L+=d;}
+  let d=s*L; for(let i=0;i<segs.length;i++){ if(d<=segs[i]){const f=d/segs[i]; return [pts[i][0]+(pts[i+1][0]-pts[i][0])*f, pts[i][1]+(pts[i+1][1]-pts[i][1])*f];} d-=segs[i];} return pts[pts.length-1];}
+function drawGalvanic(dt){
+  const r=R1, c=ctx; if(dt>0&&!RM.matches) gStep(dt,r);
+  c.clearRect(0,0,W,H); c.fillStyle=TK.scene; c.fillRect(0,0,W,H);
+  c.fillStyle=rgba(SEA,.55); beakerPath(c,BK.liq); c.fill();
+  for(const side of ['L','R']){ const g=plateGeom(side,r); const m=side===r.anSide?r.an:r.ca; let N=Math.min(170,Math.round(Math.sqrt(r.loss[side]/0.8)*170)); c.fillStyle=m.prod;
+    for(let i=0;i<N;i++){const h1=hash(i*7+(side==='L'?1:2)), h2=hash(i*13+5), h3=hash(i*29+11); let x,y;
+      if(h1<0.55){const face=h2<0.5?-1:1; x=g.cx+face*(Math.max(g.w,3)/2+1+h3*5); y=BK.liq+4+h2*(g.h-6);} else {x=g.cx+(h2-.5)*90; y=BK.bot-3-h3*6;}
+      c.beginPath(); c.arc(x,y,1.3+h3*1.6,0,Math.PI*2); c.fill();}}
+  c.strokeStyle=TK.glass; c.lineWidth=2; beakerPath(c,BK.top,true); c.stroke();
+  for(const side of ['L','R']){ const g=plateGeom(side,r), m=MI[side==='L'?GAL.L:GAL.R];
+    c.fillStyle=m.col; c.fillRect(g.cx-PLATE/2,TOPY,PLATE,BK.liq-TOPY);
+    if(!g.perf){c.beginPath(); const n=24, rough=Math.min(3,g.loss*6); c.moveTo(g.cx-PLATE/2,BK.liq);
+      for(let i=0;i<=n;i++) c.lineTo(g.cx-g.w/2+rough*hash(i*3+(side==='L'?7:9)),BK.liq+g.h*i/n);
+      for(let i=n;i>=0;i--) c.lineTo(g.cx+g.w/2-rough*hash(i*5+(side==='L'?3:4)),BK.liq+g.h*i/n);
+      c.lineTo(g.cx+PLATE/2,BK.liq); c.closePath(); c.fill();}
+    else {c.beginPath(); c.moveTo(g.cx-PLATE/2,BK.liq); for(let i=0;i<=6;i++) c.lineTo(g.cx-PLATE/2+PLATE*i/6,BK.liq+4+6*hash(i+3)); c.lineTo(g.cx+PLATE/2,BK.liq); c.fill();}
+    c.fillStyle='rgba(255,255,255,.25)'; c.fillRect(g.cx-PLATE/2+2,TOPY,3,BK.liq-TOPY);
+    const isAn=side===r.anSide&&!r.same, lx=side==='L'?g.cx-PLATE/2-10:g.cx+PLATE/2+10, al=side==='L'?'right':'left';
+    if(!r.same) txt(isAn?'ANODE · oxidation':'CATHODE · reduction',lx,TOPY+18,isAn?TK.anode:TK.cathode,FONT.head,al);
+    txt(m.name,lx,TOPY+34,TK.muted,FONT.body,al);
+    if(g.perf) txt('used up',lx,BK.liq+22,TK.anode,FONT.lab,al);
+  }
+  // wire
+  c.strokeStyle=TK.ink; c.lineWidth=2; const cut=!r.wire;
+  c.beginPath(); c.moveTo(ELX.L,TOPY); c.lineTo(ELX.L,WY); c.lineTo(cut?236:ELX.R,WY); if(!cut) c.lineTo(ELX.R,TOPY); c.stroke();
+  if(cut){c.beginPath(); c.moveTo(324,WY); c.lineTo(ELX.R,WY); c.lineTo(ELX.R,TOPY); c.stroke();
+    c.fillStyle=TK.panel; c.strokeStyle=TK.muted; c.lineWidth=1.5; c.beginPath(); c.rect(240,WY-11,80,22); c.fill(); c.stroke(); txt('insulator',280,WY+4,TK.ink,FONT.sm,'center');}
+  else {c.fillStyle=TK.panel; c.strokeStyle=TK.ink; c.lineWidth=1.5; c.beginPath(); c.rect(226,WY-14,108,28); c.fill(); c.stroke(); txt(r.live?fmtI(r.I):'0 A',280,WY+5,TK.ink,'600 13px "IBM Plex Mono", monospace','center');
+    if(r.live){const pts=[[ELX[r.anSide],TOPY],[ELX[r.anSide],WY],[ELX[r.caSide],WY],[ELX[r.caSide],TOPY]]; c.fillStyle=TK.electron;
+      for(let i=0;i<12;i++){const p=alongPath(pts,(i/12+ePhase)%1); if(p[0]>222&&p[0]<338&&Math.abs(p[1]-WY)<1) continue; c.beginPath(); c.arc(p[0],p[1],3.2,0,Math.PI*2); c.fill();}
+      txt(r.anSide==='L'?'e⁻ →':'← e⁻',r.anSide==='L'?360:200,WY-10,TK.electron,FONT.lab,'center');}}
+  for(const p of gParts){const al=clamp(Math.min(1,p.life/0.5,(p.max-p.life)/0.25),0,1); ion(p.x,p.y,p.type,al);}
+  legend([['+',(r.presAn?r.an:r.ca).ion+' metal ion'],['-','OH⁻ hydroxide'],['e','electron']]);
+}
+function updGalvanic(){
+  const r=R1=cellAt(GAL,GAL.t);
+  $('#mL').value=GAL.L; $('#mR').value=GAL.R; $('#aR').value=Math.log10(GAL.AR); $('#aRout').textContent=fmtArea(GAL.AR);
+  press('#gPost .chip',b=>b.dataset.q===GAL.post);
+  press('#gEx .chip',b=>{const s=GSC[b.dataset.x]; return s.L===GAL.L&&s.R===GAL.R&&Math.abs(Math.log10(s.AR/GAL.AR))<0.01;});
+  drawSeries();
+  const an=r.an.name.toLowerCase(), ca=r.ca.name.toLowerCase(); let o;
+  const ac=r.same?[['Anode','None: same metal both sides'],['Cathode','None']]:[['Anode',`${r.an.name} (more active): ${r.an.rx}`,TK.anode],['Cathode',`${r.ca.name} (more noble): O₂ + 2H₂O + 4e⁻ → 4OH⁻`,TK.cathode]];
+  if(r.gone[r.anSide]!=null&&!r.same&&r.presCa) o={big:fmtRate(r.rateC),unit:'mm/yr',sub:`${r.an.name} used up in year ${sig(r.gone[r.anSide],2)} · I = 0`,stage:`The ${an} is used up, so the cell has stopped`,
+    cap:`Once the anode has dissolved there is no anode left in the water, so the current stops. The ${ca} is no longer protected and corrodes at its own rate. This is why sacrificial anodes are inspected and replaced before they run out.`};
+  else if(r.gone[r.caSide]!=null&&r.presAn) o={big:fmtRate(r.freeA),unit:'mm/yr',sub:`${r.ca.name} used up · I = 0`,stage:`The ${ca} is used up, so the cell has stopped`,cap:`With no cathode left the galvanic current stops, and the ${an} corrodes only at its own rate.`};
+  else if(r.same) o={big:fmtRate(r.freeA),unit:'mm/yr',sub:`${r.an.name} on both sides · ΔE = 0 V`,stage:'Same metal: no driving voltage',cap:'With identical metals there is no potential difference, so no current flows through the wire. Each plate corrodes on its own, uniformly.'};
+  else if(!r.wire) o={big:fmtRate(r.freeA),unit:'mm/yr',sub:`own corrosion of the ${an} only`,stage:'Joint insulated: no galvanic current',cap:`An insulating washer or sleeve breaks the metal path between the two, so electrons from the ${an} cannot reach the ${ca}. Each metal corrodes only at its own rate.`};
+  else { const ratio=r.Ac/r.Aa;
+    o={big:fmtRate(r.rateA),unit:'mm/yr',sub:`${r.an.name} anode · ΔE = ${r.dE.toFixed(2)} V · I = ${fmtI(r.I)}`,stage:r.prot<0.1?`The ${an} corrodes and the ${ca} is protected`:`The ${an} corrodes faster than it would alone`,
+      cap:(ratio>=10?`Small anode, large cathode: the worst combination. The big ${ca} surface collects lots of oxygen and pushes all that current through a small area of ${an}.`:ratio<=0.1?`Large anode, small cathode: the current is small and spread over a big area, so the attack is mild.`:`The further apart the metals are in the series, the bigger ΔE, the bigger the current and the faster the anode goes.`)
+        +(r.prot<0.1&&r.ca.id==='fe'?` The steel is cathodically protected: this is how zinc anodes protect hulls and offshore legs.`:'')};}
+  o.ac=ac;
+  o.math=r.live?eq('I =',fr('ΔE','R<sub>water</sub> + R<sub>anode</sub> + R<sub>cathode</sub>'),'=',fr(r.dE.toFixed(2)+' V',fmtOhm(R_SOL)+' + '+fmtOhm(r.Ra)+' + '+fmtOhm(r.Rc)),'=',res(fmtI(r.I)),why("Ohm's law"))+
+      eq('i =',fr('I','A<sub>anode</sub>'),'=',fr(fmtI(r.I),fmtArea(r.Aa)),'=',res(sig(r.iA,3)+' µA/cm²'))+
+      eq('Rate =',fr('i · M','z · F · ρ'),'=',res(fmtRate(r.galv)+' mm/yr'),why(`Faraday's law, plus ${fmtRate(r.freeA)} mm/yr of its own corrosion`))
+    :eq('I = 0',why(r.wire?'no cell':'no metal path between the two'));
+  const sd=r.anSide, m=r.an, g=r.gone[sd];
+  if(g!=null){o.time=`The ${m.name.toLowerCase()} was used up in year <b>${sig(g,2)}</b>.`; if(!r.same&&r.presCa) o.time+=` Since then the ${ca} has corroded at <b>${fmtRate(r.rateC)} mm/yr</b>.`;}
+  else {const lost=r.loss[sd], tEnd=GAL.t+(1-lost)/r.rateA; o.time=`After <b>${sig(GAL.t,2)} yr</b>: <b>${lost<0.001?'< 0.001':sig(lost,2)} mm</b> lost from each face of the ${m.name.toLowerCase()}. `+(tEnd<=10?`The 2 mm plate is used up at <b>${sig(tEnd,2)} years</b>.`:`It would last about <b>${sig(tEnd,2)} years</b>.`);}
+  setRO(o);
+  $('#status').innerHTML=`Seawater, aerated · <b>year ${sig(GAL.t,2)}</b>`;
+  $('#viewNote').textContent='Not to scale. Plate height shows the wetted area on a log scale. Particles show what is made where; their number grows with the current.';
+}
+const MG={key:'galvanic',get t(){return GAL.t;},set t(v){GAL.t=v;},toU:t=>t/10,fromU:u=>u*10,label:t=>'year '+sig(t,2),dur:9,upd:updGalvanic,draw:drawGalvanic,anim:true,
+  tick(){const k0=goneKey(R1); R1=cellAt(GAL,GAL.t); if(goneKey(R1)!==k0) gParts=[];}};
+
+/* ===================================================================== PITTING */
+const ALLOYS={'304':{short:'304',name:'304 stainless',Cr:18,Mo:0,N:0.05},'316':{short:'316',name:'316 stainless',Cr:17,Mo:2.1,N:0.05},'2507':{short:'2507 super duplex',name:'2507 super duplex',Cr:25,Mo:3.8,N:0.27}};
+const prenOf=a=>a.Cr+3.3*a.Mo+16*a.N;
+const PENV={tap:{name:'tap water',Cl:100,pH:7.5,col:TAP},sea:{name:'seawater',Cl:19000,pH:8.1,col:SEA}};
+const PIT={alloy:'316',env:'sea',T:20,t:2,ph:false};
+const PEX={sea316:{alloy:'316',env:'sea',T:20},tap304:{alloy:'304',env:'tap',T:20}};
+const needP=(env,T)=>10+4*Math.log10(PENV[env].Cl)+0.4*(T-20);
+const KP=0.6, WALL=3, PITS=[[0.24,1.0],[0.62,0.7],[0.86,0.85],[0.43,0.55],[0.08,0.62],[0.74,0.45]];
+function pitCalc(){const a=ALLOYS[PIT.alloy], P=prenOf(a), need=needP(PIT.env,PIT.T), m=need-P;
+  const n=m>0?clamp(Math.round(1+0.8*m),1,6):0; const t=PIT.t;
+  const pits=PITS.slice(0,n).map(([x,f])=>({x,f,d:Math.min(WALL,KP*m*Math.sqrt(t)*f)}));
+  const dmax=pits.reduce((s,p)=>Math.max(s,p.d),0), vol=pits.reduce((s,p)=>s+0.141*p.d**3,0), avg=vol/81;
+  const tLeak=m>0?(WALL/(KP*m))**2:Infinity; const rate=m>0?KP*m/(2*Math.sqrt(Math.max(t,0.05))):0; const kFe=3.27e-3*55.85/(2*7.87);
+  return {a,P,need,m,n,pits,dmax,avg,tLeak,rate,i:rate/kFe};}
+let axP=null;
+function drawDP(k){const svg=$('#dP'); svg.innerHTML='';
+  const ax=axP=axes(svg,{w:540,h:340,ml:52,mr:96,mt:16,mb:44,x0:0,x1:80,y0:10,y1:50,xt:[0,20,40,60,80].map(v=>[v,v]),yt:[10,20,30,40,50].map(v=>[v,v]),xl:'Water temperature, °C',yl:'PREN'});
+  for(const e of ['tap','sea']){const pts=[[0,needP(e,0)],[80,needP(e,80)]].map(([x,y])=>[x,clamp(y,10,50)]); const sel=e===PIT.env;
+    if(sel){const poly2=[[0,10],...pts,[80,10]]; el('polygon',{points:poly(poly2,ax.X,ax.Y),fill:'var(--anode-soft)'},svg);}
+    el('polyline',{points:poly(pts,ax.X,ax.Y),fill:'none',stroke:sel?'var(--anode)':'var(--muted)','stroke-width':sel?2.4:1.2,'stroke-dasharray':sel?'':'5 4'},svg);
+    const xe=e==='sea'?(50-needP(e,0))/0.4:72, ye=clamp(needP(e,xe),10,50); el('text',{x:ax.X(Math.min(xe,78))-4,y:ax.Y(ye)-8,'text-anchor':'end',style:`font-size:11px;fill:${sel?'var(--anode)':'var(--muted)'}`},svg,`needed in ${PENV[e].name}`);}
+  el('text',{x:ax.X(40),y:ax.Y(12.5),'text-anchor':'middle',style:'font-size:11px;fill:var(--anode)'},svg,'pits grow');
+  for(const [key,a] of Object.entries(ALLOYS)){const P=prenOf(a), sel=key===PIT.alloy; el('line',{x1:ax.X(0),x2:ax.X(80),y1:ax.Y(P),y2:ax.Y(P),stroke:sel?'var(--ink)':'var(--line)','stroke-width':sel?1.8:1.2},svg);
+    el('text',{x:ax.X(80)+6,y:ax.Y(P)+4,style:`font-size:11.5px;${sel?'font-weight:600':'fill:var(--muted)'}`},svg,a.short);}
+  el('circle',{cx:ax.X(PIT.T),cy:ax.Y(k.P),r:6,fill:k.m>0?'var(--anode)':'var(--cathode)',stroke:'var(--panel)','stroke-width':2},svg);}
+function drawPitting(){const c=ctx, k=pitCalc(), env=PENV[PIT.env]; c.clearRect(0,0,W,H); c.fillStyle=TK.scene; c.fillRect(0,0,W,H);
+  // plan view
+  txt('SURFACE, AS AN INSPECTOR SEES IT',14,16,TK.muted,FONT.sm);
+  c.fillStyle='#c9d0d4'; c.fillRect(14,24,W-28,86); for(let x=14;x<W-14;x+=3){c.fillStyle=`rgba(255,255,255,${0.08+0.1*hash(x)})`; c.fillRect(x,24,1,86);}
+  k.pits.forEach((p,j)=>{const x=14+p.x*(W-28), y=40+hash(j*17)*52; c.fillStyle='rgba(156,74,28,.35)'; c.beginPath(); c.ellipse(x,y+6+p.d*2,1.6+p.d*0.7,4+p.d*4,0,0,Math.PI*2); c.fill(); c.fillStyle='#2a2522'; c.beginPath(); c.arc(x,y,1.2+0.35*p.d,0,Math.PI*2); c.fill();});
+  // cross-section
+  const Y0=188, PX=56, YB=Y0+WALL*PX;
+  txt('CROSS-SECTION THROUGH THE SAME PITS',14,132,TK.muted,FONT.sm);
+  c.fillStyle=PIT.ph?rgba(uiCol(env.pH),.6):rgba(env.col,.55); c.fillRect(0,140,W,Y0-140);
+  c.fillStyle='#b3bcc1'; c.fillRect(0,Y0,W,YB-Y0); c.fillStyle=TK.scene; c.fillRect(0,YB,W,H-YB);
+  txt(`stainless pipe wall, ${WALL} mm`,14,YB-10,'#26323a',FONT.body); txt(env.name,14,158,TK.ink,FONT.lab);
+  const fluid=PIT.ph?rgba(uiCol(1.5),.95):'#5b4128';
+  for(const p of k.pits){const x=14+p.x*(W-28), d=p.d*PX, rx=Math.max(3,0.3*d), ry=0.375*d, cy=Y0+0.625*d;
+    c.fillStyle=fluid; c.beginPath(); c.rect(x-3,Y0-1,6,Math.max(4,0.3*d)+1); c.fill(); if(d>6){c.beginPath(); c.ellipse(x,cy,rx,ry,0,0,Math.PI*2); c.fill();}
+    if(p.d>=WALL){c.fillStyle='rgba(132,190,190,.8)'; for(let j=0;j<4;j++){c.beginPath(); c.arc(x+(hash(j)-.5)*4,YB+6+((CLK*30+j*9)%40),2.2,0,Math.PI*2); c.fill();} txt('leak',x+8,YB+18,TK.anode,FONT.lab);}
+    for(let j=0;j<Math.min(6,1+Math.floor(d/14));j++){const ph=(CLK*0.35+hash(j+p.x*99))%1; ion(x+(hash(j*3+p.x*50)-.5)*rx,cy+(hash(j*7+p.x*30)-.5)*ry*1.2,'+',0.9);}
+    for(let j=0;j<3;j++){const ph=(CLK*0.3+j/3+p.x)%1; ion(x+(hash(j*11+p.x*70)-.5)*30*(1-ph),150+ph*(Y0-150),'cl',Math.sin(Math.PI*ph));}
+  }
+  // passive film
+  c.fillStyle='#8fd0e2'; for(let x=0;x<W;x++){ if(k.pits.some(p=>Math.abs(x-(14+p.x*(W-28)))<4)) continue; c.fillRect(x,Y0-2,1,2.5);}
+  // metastable pits that heal
+  if(k.m<=0&&k.m>-4){for(let j=0;j<4;j++){const per=1.6+hash(j)*1.2, ph=((CLK+hash(j*5)*per)/per)%1, cyc=Math.floor((CLK+hash(j*5)*per)/per); const x=20+hash(j*13+cyc*7)*(W-40); if(ph<0.5){c.fillStyle=fluid; c.globalAlpha=Math.sin(Math.PI*ph*2); c.beginPath(); c.arc(x,Y0+2,3,0,Math.PI*2); c.fill(); c.globalAlpha=1;}}}
+  // cathode around
+  for(let j=0;j<8;j++){const ph=(CLK*0.4+j/8)%1, x=30+hash(j*41)*(W-60); if(k.n&&k.pits.some(p=>Math.abs(x-(14+p.x*(W-28)))<14)) continue; ion(x,Y0-8-ph*22,'-',Math.sin(Math.PI*ph)*(k.n?0.95:0.4));}
+  txt('passive film (nm thick, drawn far thicker)',W-14,Y0-8,TK.ink,FONT.sm,'right');
+  c.fillStyle='#26323a'; c.fillRect(W-14-PX,YB-14,PX,3); txt('1 mm',W-14-PX/2,YB-20,'#26323a',FONT.sm,'center');
+  legend([['+','metal ions (anode, in pit)'],['-','OH⁻ (cathode, outside)'],['cl','Cl⁻ drawn into the pit']]);}
+function updPitting(){const k=pitCalc();
+  press('#pAlloy .chip',b=>b.dataset.a===PIT.alloy); press('#pEnv .chip',b=>b.dataset.e===PIT.env);
+  press('#pEx .chip',b=>{const e=PEX[b.dataset.x]; return e.alloy===PIT.alloy&&e.env===PIT.env&&e.T===PIT.T;});
+  $('#pT').value=PIT.T; $('#pTout').textContent=PIT.T+' °C'; drawDP(k);
+  const ac=[['Anode','Inside each pit: a tiny area',TK.anode],['Cathode','The whole passive surface around it: a huge area',TK.cathode],['Inside the pit','M²⁺ + H₂O → MOH⁺ + H⁺ makes it acidic (pH ≈ 1–2), and Cl⁻ moves in to balance the charge. Acid chloride stops the film healing, so the pit feeds itself.']];
+  let o;
+  if(k.m>0) o={big:sig(k.dmax,2),unit:'mm deepest pit',sub:`${k.a.name}: PREN ${sig(k.P,3)}, needs ≥ ${sig(k.need,3)} here`,
+    stage:k.dmax>=WALL?'Pitted through: the pipe leaks':`${k.n} pits growing`,cap:`Chloride breaks the passive film at weak spots. Each pit is a tiny anode next to a huge cathode, so the attack is fast and deep while the surface hardly changes: the mouths stay pinhole-sized. That is why pitting is hard to spot and can perforate a wall that looks almost new.`};
+  else o={big:'No pits',unit:'',sub:`${k.a.name}: PREN ${sig(k.P,3)} ≥ ${sig(k.need,3)} needed`,stage:k.m>-4?'Pits start but heal':'Passive film holds',cap:k.m>-4?'Tiny pits keep starting where chloride attacks the film, but there is enough chromium and molybdenum for the film to heal over them before they can turn acidic. A little more chloride or a few degrees warmer and they would survive.':'The chromium-rich oxide film reforms faster than chloride can break it, so the metal stays passive.'};
+  o.ac=ac;
+  o.extra=k.m>0?`<div class="barhead"><span>Loss if spread evenly vs deepest pit</span><span>uniform attack would look harmless</span></div><div class="cmp"><span>Average</span><div class="stack" style="width:${Math.max(0.5,k.avg/WALL*100)}%"><i style="width:100%;background:var(--muted)"></i></div><span class="tot">${sig(k.avg,2)} mm</span><span>Deepest</span><div class="stack" style="width:${k.dmax/WALL*100}%"><i style="width:100%;background:var(--anode)"></i></div><span class="tot">${sig(k.dmax,2)} mm</span></div>`:'';
+  o.math=eq('PREN = %Cr + 3.3 %Mo + 16 %N =',`${k.a.Cr} + 3.3 × ${k.a.Mo} + 16 × ${k.a.N}`,'=',res(sig(k.P,3)))+
+    eq('PREN needed in',PENV[PIT.env].name,'at',PIT.T+' °C','≈',res(sig(k.need,3)),why('indicative; more chloride or heat needs more'))+
+    (k.m>0?eq('Pit growing now at',res(sig(k.rate,2)+' mm/yr'),'=',res(sig(k.i,3)+' µA/cm²'),why('inside the pit, by Faraday\'s law; compare ~8.6 µA/cm² for 0.1 mm/yr uniform attack')):'');
+  o.time=k.m>0?`After <b>${sig(PIT.t,2)} yr</b>: deepest pit <b>${sig(k.dmax,2)} mm</b> of the 3 mm wall. `+(k.tLeak<=10?`It leaks at <b>${sig(k.tLeak,2)} years</b>.`:`It would leak at about <b>${sig(k.tLeak,2)} years</b>.`):`After <b>${sig(PIT.t,2)} yr</b>: no measurable loss.`;
+  setRO(o);
+  $('#status').innerHTML=`${k.a.name} in ${PENV[PIT.env].name} at ${PIT.T} °C · <b>year ${sig(PIT.t,2)}</b>`;
+  $('#viewNote').textContent='Top: the surface. Bottom: a cut through the same pits, to scale (3 mm wall). The mouths stay tiny while the pits grow wide underneath.';}
+const MP={key:'pitting',get t(){return PIT.t;},set t(v){PIT.t=v;},toU:t=>t/10,fromU:u=>u*10,label:t=>'year '+sig(t,2),dur:9,upd:updPitting,draw:drawPitting,anim:true,ph:true};
+
+/* ===================================================================== CREVICE */
+const CRV={alloy:'316',gap:10,T:20,t:30};
+function crvCalc(t=CRV.t){const a=ALLOYS[CRV.alloy], P=prenOf(a), g=CRV.gap;
+  const fss=g/(g+60), tau=Math.max(0.02,0.2*g/10), tau2=15*tau;
+  const O2=x=>fss+(1-fss)*Math.exp(-x/tau);
+  const pH0=0.6+0.6*Math.log10(g)-0.015*(CRV.T-20), pHss=pH0+(8.1-pH0)*fss*fss;
+  const pH=x=>8.1-(8.1-pHss)*(1-Math.exp(-x/tau2));
+  const crit=4.0-0.1*P; const ti=pHss<crit?-tau2*Math.log(1-(8.1-crit)/(8.1-pHss)):Infinity;
+  const depth=x=>x>ti?Math.min(5,4*(crit-pHss)*Math.sqrt((x-ti)/365.25)):0;
+  const d=depth(t), rate=t>ti?4*(crit-pHss)/(2*Math.sqrt(Math.max((t-ti)/365.25,0.01))):0;
+  const stage=(!isFinite(ti)&&(fss>=0.3||t>3*tau2))?0:O2(t)>0.3?1:t<ti?2:3;
+  return {a,P,fss,tau,tau2,O2,pH,pHss,crit,ti,depth,d,rate,i:rate/(3.27e-3*55.85/(2*7.87)),stage,o2:O2(t),ph:pH(t)};}
+let axC=null;
+const dayTicks=[[0.01,'15 min'],[0.1,'2.4 h'],[1,'1 day'],[10,'10 days'],[100,'100 days'],[1000,'2.7 yr']];
+function drawDC(k){const svg=$('#dC'); svg.innerHTML='';
+  const ax=axC=axes(svg,{w:540,h:340,ml:44,mr:52,mt:18,mb:44,x0:0.01,x1:1000,xlog:true,y0:0,y1:9,xt:dayTicks,yt:[0,2,4,6,8].map(v=>[v,v]),xl:'Time in seawater',yl:'pH inside the crevice'});
+  for(const p of [0,50,100]){el('text',{x:540-52+6,y:ax.Y(p/100*9)+3.5,class:'tick',style:'fill:var(--cathode)'},svg,p+' %');}
+  el('text',{x:540-8,y:12,'text-anchor':'end',class:'tick',style:'fill:var(--cathode)'},svg,'O₂ inside');
+  if(isFinite(k.ti)&&k.ti<1000) el('rect',{x:ax.X(Math.max(0.01,k.ti)),y:18,width:ax.X(1000)-ax.X(Math.max(0.01,k.ti)),height:340-44-18,fill:'var(--anode-soft)'},svg);
+  const ts=[]; for(let e=-2;e<=3.0001;e+=0.02) ts.push(10**e);
+  el('polyline',{points:poly(ts.map(t=>[t,k.O2(t)*9]),ax.X,ax.Y),fill:'none',stroke:'var(--cathode)','stroke-width':2.2},svg);
+  el('polyline',{points:poly(ts.map(t=>[t,k.pH(t)]),ax.X,ax.Y),fill:'none',stroke:'var(--anode)','stroke-width':2.4},svg);
+  if(k.crit>0){el('line',{x1:ax.X(0.01),x2:ax.X(1000),y1:ax.Y(k.crit),y2:ax.Y(k.crit),stroke:'var(--ink)','stroke-dasharray':'5 4'},svg);
+    el('text',{x:ax.X(0.012),y:ax.Y(k.crit)-6,style:'font-size:11px'},svg,`film fails below pH ${sig(k.crit,2)} (${k.a.short})`);}
+  else el('text',{x:ax.X(0.012),y:ax.Y(0.4),style:'font-size:11px'},svg,`${k.a.short}: film holds even in strong acid`);
+  if(isFinite(k.ti)&&k.ti<1000){el('circle',{cx:ax.X(k.ti),cy:ax.Y(k.crit),r:6,fill:'none',stroke:'var(--anode)','stroke-width':2},svg);
+    el('text',{x:ax.X(k.ti)-8,y:ax.Y(k.crit)+18,'text-anchor':'end',style:'font-size:11.5px;font-weight:600'},svg,`attack starts, ${fmtDays(k.ti)}`);}
+  el('text',{x:ax.X(300),y:ax.Y(k.pH(300))-8,'text-anchor':'middle',style:'font-size:11px;fill:var(--anode)'},svg,'pH');
+  const x=ax.X(clamp(CRV.t,0.01,1000)); el('line',{x1:x,x2:x,y1:18,y2:340-44,stroke:'var(--ink)','stroke-dasharray':'2 3'},svg);
+  el('circle',{cx:x,cy:ax.Y(k.ph),r:5,fill:'var(--anode)',stroke:'var(--panel)','stroke-width':2},svg);
+  el('circle',{cx:x,cy:ax.Y(k.o2*9),r:5,fill:'var(--cathode)',stroke:'var(--panel)','stroke-width':2},svg);}
+function drawCrevice(){const c=ctx, k=crvCalc(); c.clearRect(0,0,W,H); c.fillStyle=TK.scene; c.fillRect(0,0,W,H);
+  const YP=232, gpx=5+9*Math.log10(CRV.gap), XM=320, PXmm=34;
+  c.fillStyle=PIT.ph?rgba(uiCol(8.1),.55):rgba(SEA,.55); c.fillRect(0,0,W,YP);
+  // washer
+  c.fillStyle='#4f585e'; c.fillRect(10,120,XM-10,YP-gpx-120); txt('washer / gasket',22,148,'#e9eef0',FONT.body);
+  // crevice fluid with pH gradient
+  const prog=clamp((8.1-k.ph)/Math.max(0.1,8.1-k.pHss),0,1);
+  const g=c.createLinearGradient(XM,0,10,0);
+  const mouthPH=8.1-(8.1-k.ph)*0.35;
+  if(PIT.ph){g.addColorStop(0,rgba(uiCol(mouthPH),.9)); g.addColorStop(1,rgba(uiCol(k.ph),.95));}
+  else {g.addColorStop(0,rgba(SEA,.55)); g.addColorStop(1,rgba([91,65,40],0.25+0.6*prog));}
+  c.fillStyle=g; c.fillRect(10,YP-gpx,XM-10,gpx);
+  // plate with attack cavity
+  c.fillStyle='#b3bcc1'; c.fillRect(0,YP,W,H-YP);
+  if(k.d>0){const dp=k.d*PXmm, wpx=60+k.d*36; c.fillStyle=PIT.ph?rgba(uiCol(k.ph),.95):'#5b4128'; c.beginPath(); c.ellipse(XM-30-wpx/4,YP,wpx/2,dp,0,0,Math.PI); c.fill(); txt('crevice attack',XM-30-wpx/4,YP+dp+16,TK.anode,FONT.lab,'center');}
+  txt('stainless plate',W-14,H-14,'#26323a',FONT.body,'right');
+  // passive film outside
+  c.fillStyle='#8fd0e2'; c.fillRect(XM,YP-2,W-XM,2.5); if(k.stage<3) c.fillRect(10,YP-2,XM-10,2.5);
+  // O2 outside
+  for(let j=0;j<26;j++){const x=XM+12+((hash(j*5)*(W-XM-24)+CLK*8*(hash(j)-.5)*4)%(W-XM-24)+(W-XM-24))%(W-XM-24), y=20+hash(j*9)*(YP-gpx-34)+Math.sin(CLK+j)*4; o2(x,y,0.85);}
+  for(let j=0;j<12;j++){const x=10+hash(j*3)*(W-20); if(x<XM) {const y=40+hash(j*7)*60; o2(x,y,0.85);}}
+  // O2 inside the crevice
+  const nIn=Math.round(10*k.o2); for(let j=0;j<nIn;j++){const x=20+((hash(j*17)*(XM-40)+CLK*6*(hash(j*3)-.5))%(XM-40)+(XM-40))%(XM-40); o2(x,YP-gpx/2,0.9);}
+  // chloride drawn in, metal ions inside
+  if(k.stage>=2||prog>0.2){for(let j=0;j<Math.round(2+6*prog);j++){const ph=(CLK*0.18+j/8)%1; ion(XM+20-ph*(XM-30),YP-gpx/2+(hash(j)-.5)*Math.max(0,gpx-10),'cl',Math.sin(Math.PI*ph));}}
+  if(k.stage>=2){for(let j=0;j<Math.round(2+5*prog);j++){const x=24+hash(j*23)*(XM-60); ion(x,YP-gpx/2+Math.sin(CLK*2+j)*Math.max(0,gpx/2-5),'+',0.9);}
+    for(let j=0;j<6;j++){const ph=(CLK*0.4+j/6)%1; ion(XM+16+hash(j*31)*160,YP-8-ph*24,'-',Math.sin(Math.PI*ph));}}
+  // labels
+  txt('seawater · plenty of O₂',W-14,24,TK.ink,FONT.lab,'right');
+  txt(`crevice: gap drawn about ×${Math.max(1,Math.round(gpx/(CRV.gap*PXmm/1000)))}`,14,YP-gpx-8-(YP-gpx-120>0?0:0),'#e9eef0',FONT.sm);
+  if(k.stage>=2){txt('inside: anode',120,YP+22,TK.anode,FONT.head,'center'); txt('outside: cathode',XM+110,YP-36,TK.cathode,FONT.head,'center');}
+  legend([['o2','O₂'],['cl','Cl⁻'],['+','metal ions'],['-','OH⁻']]);}
+function updCrevice(){const k=crvCalc();
+  press('#cAlloy .chip',b=>b.dataset.a===CRV.alloy);
+  press('#cEx .chip',()=>CRV.alloy==='316'&&Math.abs(CRV.gap-10)<0.5&&CRV.T===20);
+  $('#cG').value=Math.log10(CRV.gap); $('#cGout').textContent=sig(CRV.gap,2)+' µm'; $('#cT').value=CRV.T; $('#cTout').textContent=CRV.T+' °C';
+  drawDC(k);
+  const st=[['O₂ inside is used up; the outside still has plenty'],['Metal ions hydrolyse and make acid; Cl⁻ is drawn in'],[`pH falls below ${k.crit>0?sig(k.crit,2):'the critical value'} and the film breaks`],['Fast attack inside, fed by the cathode outside']];
+  const now=k.stage===0?-1:k.stage===1?0:k.stage===2?1:(k.d>0.05?3:2);
+  const steps=`<ol class="steps">${st.map((s,i)=>`<li class="${i<now?'done':i===now?'now':''}"><b>${i+1}</b><span>${s}</span></li>`).join('')}</ol>`;
+  const caps=['Oxygen diffuses into the narrow gap far more slowly than it is used up, so the water inside soon has none. Corrosion inside slows at first, but the inside and outside are no longer the same.',
+    'With no oxygen inside, the metal there can only act as an anode; the oxygen-rich surface outside becomes the cathode. Metal ions released inside react with water to make H⁺, and Cl⁻ moves in to balance the charge.',
+    'The water in the crevice is now a concentrated acid chloride. Below the critical pH the passive film cannot reform and the metal inside goes active.',
+    'The small anode inside is driven by the large cathode outside, so the attack runs fast and is hidden under the washer.'];
+  let o;
+  if(isFinite(k.ti)) o={big:fmtDays(k.ti),unit:'until attack starts',sub:`pH inside falls to ${sig(k.pHss,2)}, film fails below ${sig(k.crit,2)}`};
+  else o={big:'No attack',unit:'',sub:`pH inside settles at ${sig(k.pHss,2)}, above the ${k.crit>0?sig(k.crit,2):'critical value'} needed to break the film`};
+  o.stage=k.stage===0?'Steady: the film holds':['','Oxygen being used up inside','Crevice turning acidic','Film broken: crevice corrosion'][k.stage]+(k.stage===3&&k.d>0.05?`, ${sig(k.d,2)} mm deep`:'');
+  o.cap=k.stage===0?(k.fss>0.4?'The gap is wide enough for fresh seawater to keep getting in, so the inside never runs out of oxygen and stays like the outside.':'The crevice turns acidic, but not acidic enough to break this alloy\'s film, so it stays passive.'):caps[Math.max(0,now)];
+  o.ac=[['Anode','The metal inside the crevice, once its oxygen is used up',TK.anode],['Cathode','The open surface outside, where oxygen is plentiful',TK.cathode],['Why','A difference in oxygen (differential aeration), then acid build-up. Same metal throughout.']];
+  o.extra=steps;
+  o.math=eq('Critical pH ≈ 4.0 − 0.1 × PREN = 4.0 − 0.1 ×',sig(k.P,3),'=',res(sig(k.crit,2)),why('lower for a more resistant alloy'))+
+    eq('pH the crevice reaches ≈',res(sig(k.pHss,2)),why(`gap ${sig(CRV.gap,2)} µm at ${CRV.T} °C; tighter or hotter is more acidic`))+
+    (k.d>0?eq('Attack growing at',res(sig(k.rate,2)+' mm/yr'),'=',res(sig(k.i,3)+' µA/cm²'),why("Faraday's law, inside the crevice")):'');
+  o.time=`At <b>${fmtDays(CRV.t)}</b>: O₂ inside <b>${Math.round(k.o2*100)} %</b> of outside, pH <b>${sig(k.ph,2)}</b>`+(k.d>0?`, attack <b>${sig(k.d,2)} mm</b> deep.`:'.');
+  setRO(o);
+  $('#status').innerHTML=`${k.a.name}, ${sig(CRV.gap,2)} µm gap, seawater at ${CRV.T} °C · <b>${fmtDays(CRV.t)}</b>`;
+  $('#viewNote').textContent='Cross-section where a washer sits on the plate. The gap is drawn many times wider than it is so you can see inside it.';}
+const MC={key:'crevice',get t(){return CRV.t;},set t(v){CRV.t=v;},toU:t=>(Math.log10(clamp(t,0.01,1000))+2)/5,fromU:u=>10**(-2+5*u),label:t=>fmtDays(t),dur:10,upd:updCrevice,draw:drawCrevice,anim:true,ph:true};
+
+/* ===================================================================== FLOW */
+const MATS={cu:{name:'Copper',short:'Copper',vc:1.5,r0:0.02,cav:1.0},nab:{name:'Nickel-aluminium bronze',short:'Bronze',vc:4.5,r0:0.02,cav:0.35},ss:{name:'Stainless steel 316',short:'Stainless 316',vc:20,r0:0.001,cav:0.15}};
+const FEX={bend:{mat:'cu',v:3,wall:1,name:'copper pipe bend'},prop:{mat:'nab',v:18,wall:10,name:'propeller blade edge'}};
+const FLO={ex:'bend',mat:'cu',v:3,sand:false,smooth:false,t:2};
+const P_ABS=111.4e3, P_V=2.3e3, RHO_W=1025;
+function flowCalc(v=FLO.v,mat=FLO.mat){const m=MATS[mat]; const vc=m.vc*(FLO.smooth?1.3:1)*(FLO.sand?0.6:1); const si=FLO.smooth?0.7:1.0; const vcav=Math.sqrt(2*(P_ABS-P_V)/(RHO_W*si));
+  const rc=m.r0*(1+0.5*Math.min(v,vc)/vc), re=v>vc?0.3*(FLO.sand?3:1)*Math.min(2,(v-vc)/vc)**1.5:0, rcav=v>vcav?2*m.cav*((v/vcav)**6-1):0;
+  const sigma=v>0?(P_ABS-P_V)/(0.5*RHO_W*v*v):Infinity; const tot=rc+re+rcav;
+  const regime=v>vcav?'cav':v>vc?'ero':'film'; return {m,vc,vcav,si,rc,re,rcav,tot,sigma,regime};}
+let axF=null;
+function drawDF(k){const svg=$('#dF'); svg.innerHTML='';
+  const ax=axF=axes(svg,{w:540,h:340,ml:56,mr:84,mt:16,mb:44,x0:0,x1:25,y0:0.001,y1:20,ylog:true,xt:[0,5,10,15,20,25].map(v=>[v,v]),yt:[[0.001,'0.001'],[0.01,'0.01'],[0.1,'0.1'],[1,'1'],[10,'10']],xl:'Flow speed, m/s',yl:'Corrosion rate, mm/yr'});
+  const b1=Math.min(k.vc,25), b2=Math.min(k.vcav,25);
+  el('rect',{x:ax.X(b2),y:16,width:ax.X(25)-ax.X(b2),height:340-60,fill:'var(--anode-soft)'},svg);
+  if(b1<b2) el('rect',{x:ax.X(b1),y:16,width:ax.X(b2)-ax.X(b1),height:340-60,fill:'var(--grid)'},svg);
+  const lab=(x0,x1,s)=>{if(x1-x0>1.5) el('text',{x:(ax.X(x0)+ax.X(x1))/2,y:30,'text-anchor':'middle',style:'font-size:10.5px;fill:var(--muted)'},svg,s);};
+  lab(0,b1,'film intact'); if(b1<b2) lab(b1,b2,'erosion-corrosion'); lab(b2,25,'cavitation');
+  for(const [key,m] of Object.entries(MATS)){const sel=key===FLO.mat; const pts=[]; for(let v=0;v<=25.0001;v+=0.1) pts.push([v,clamp(flowCalc(v,key).tot,0.001,20)]);
+    el('polyline',{points:poly(pts,ax.X,ax.Y),fill:'none',stroke:sel?'var(--anode)':'var(--muted)','stroke-width':sel?2.6:1.2,'stroke-dasharray':sel?'':'4 4'},svg);
+    const ye=clamp(flowCalc(25,key).tot,0.001,20); el('text',{x:ax.X(25)+6,y:ax.Y(ye)+(key==='ss'?10:4),style:`font-size:11px;${sel?'font-weight:600':'fill:var(--muted)'}`},svg,m.short.split(' ')[0]);}
+  el('circle',{cx:ax.X(FLO.v),cy:ax.Y(clamp(k.tot,0.001,20)),r:6,fill:'var(--anode)',stroke:'var(--panel)','stroke-width':2},svg);}
+function drawFlow(){const c=ctx, k=flowCalc(), ex=FEX[FLO.ex], YW=232, PXmm=(H-YW)/ex.wall; c.clearRect(0,0,W,H);
+  c.fillStyle=TK.scene; c.fillRect(0,0,W,H); c.fillStyle=rgba(SEA,.5); c.fillRect(0,0,W,YW+30);
+  // wall profile
+  const base=(k.rc+k.re)*FLO.t*PXmm, cavD=k.rcav*FLO.t*PXmm, zone=x=>x>270&&x<500?Math.sin(Math.PI*(x-270)/230):0;
+  const prof=x=>{const s=((x+CLK*0)/46)%1, scal=s<0.72?s/0.72:(1-s)/0.28; return Math.min(H-YW+4,base*(k.re>0?0.55+0.45*scal:1)+cavD*zone(x)*(0.55+0.45*hash(x|0)));};
+  c.fillStyle=k.m===MATS.cu?'#c0703f':k.m===MATS.nab?'#b5924c':'#c4ccd1';
+  c.beginPath(); c.moveTo(0,H); for(let x=0;x<=W;x+=2) c.lineTo(x,YW+prof(x)); c.lineTo(W,H); c.closePath(); c.fill();
+  const holed=k.tot*FLO.t>=ex.wall; if(holed) txt('holed through',385,H-14,TK.anode,FONT.lab,'center');
+  // protective film
+  const film=clamp(1-(FLO.v-0.8*k.vc)/(0.4*k.vc),0,1);
+  c.fillStyle=k.m===MATS.ss?'#8fd0e2':'#3d6b55'; for(let x=0;x<W;x+=2){ if(hash(x*13)>film) continue; c.fillRect(x,YW+prof(x)-3,2,3);}
+  // flow tracers
+  const sp=Math.min(420,22*FLO.v+4), turb=clamp((FLO.v/k.vc),0,3);
+  c.strokeStyle=TK.ink; c.globalAlpha=0.45; c.lineWidth=1.2;
+  for(let j=0;j<34;j++){const y0=20+hash(j*3)*(YW-40), x=((hash(j*7)*W+CLK*sp)%(W+60))-30; const wob=turb*6*Math.sin(CLK*3+j); const L=8+Math.min(40,FLO.v*2.2);
+    c.beginPath(); c.moveTo(x-L,y0+wob-turb*2); c.lineTo(x,y0+wob); c.stroke();}
+  c.globalAlpha=1;
+  // sand
+  if(FLO.sand){for(let j=0;j<16;j++){const ph=(CLK*sp/W*0.7+j/16)%1, x=ph*W, y=YW-110+ph*ph*110-6; c.fillStyle='#8a6a3a'; c.beginPath(); c.arc(x,Math.min(y,YW+prof(x)-4),2.2,0,Math.PI*2); c.fill();}
+    for(let j=0;j<8;j++){const ph=(CLK*0.9+j/8)%1; c.strokeStyle='rgba(255,255,255,.8)'; c.beginPath(); c.arc(60+hash(j)*440,40+hash(j*3)*150-ph*20,2+ph*2,0,Math.PI*2); c.stroke();}}
+  // cavitation bubbles
+  if(FLO.v>0.9*k.vcav){const n=Math.round(clamp(6*(FLO.v/k.vcav)**3,2,30));
+    for(let j=0;j<n;j++){const per=0.9+hash(j)*0.6, ph=((CLK+hash(j*5)*per)/per)%1, x=290+hash(j*11+Math.floor((CLK+hash(j*5)*per)/per)*7)*200, y0=YW-70+hash(j*3)*30, y=y0+ph*(YW+prof(x)-y0-4);
+      const r=ph<0.8?3+ph*6:Math.max(0,(1-ph)/0.2*8); c.strokeStyle='#fff'; c.lineWidth=1.3; c.beginPath(); c.arc(x,y,r,0,Math.PI*2); c.stroke();
+      if(ph>0.92&&FLO.v>k.vcav){c.strokeStyle=TK.electron; c.lineWidth=2; c.beginPath(); for(let a=0;a<6;a++){c.moveTo(x,y); c.lineTo(x+Math.cos(a)*7,y+Math.sin(a)*7);} c.stroke();}}
+    txt('bubbles form and collapse here',395,YW-84,TK.ink,FONT.sm,'center');}
+  // labels
+  c.strokeStyle=TK.ink; c.lineWidth=2; c.beginPath(); c.moveTo(20,26); c.lineTo(110,26); c.stroke(); c.beginPath(); c.moveTo(110,26); c.lineTo(102,21); c.lineTo(102,31); c.closePath(); c.fillStyle=TK.ink; c.fill();
+  txt(`flow ${sig(FLO.v,2)} m/s`,118,30,TK.ink,FONT.lab);
+  txt(film>0.5?'protective film intact':film>0?'film being stripped':'film gone: bare metal',14,YW-10,TK.ink,FONT.sm);
+  txt(`${k.m.name}, ${ex.wall} mm ${FLO.ex==='bend'?'pipe wall':'at the blade edge'}`,W-14,H-30,'#26323a',FONT.body,'right');
+  c.fillStyle='#26323a'; const sb=FLO.ex==='bend'?0.5:5; c.fillRect(14,H-16,sb*PXmm,3); txt(`${sb} mm`,14+sb*PXmm/2,H-22,'#26323a',FONT.sm,'center');}
+function updFlow(){const k=flowCalc(), ex=FEX[FLO.ex];
+  press('#fEx .chip',b=>b.dataset.x===FLO.ex); $('#fV').value=FLO.v; $('#fVout').textContent=sig(FLO.v,3)+' m/s';
+  press('#fMat .chip',b=>b.dataset.m===FLO.mat);
+  $('#fSand').setAttribute('aria-pressed',FLO.sand); $('#fSmooth').setAttribute('aria-pressed',FLO.smooth);
+  drawDF(k);
+  const R={film:['Protective film intact','The flow brings a little more oxygen, so the rate creeps up, but the oxide film on the surface survives and keeps the attack slow.'],
+    ero:['Erosion-corrosion','The flow is now fast enough to strip the protective film. Bare metal is exposed, corrodes, re-films and is stripped again, leaving smooth horseshoe-shaped grooves pointing downstream. Faster flow, sand or bubbles make it worse.'],
+    cav:['Cavitation','The pressure in the fast-moving water drops below its vapour pressure, so vapour bubbles form and then collapse against the metal. Each collapse fires a tiny jet at the surface. The hammering tears out metal and leaves a rough, spongy surface; corrosion then attacks the fresh metal.']};
+  const ac=k.regime==='cav'?[['Damage','Mostly mechanical: collapsing bubbles hammer the surface',TK.anode],['Corrosion','Attacks the freshly exposed metal between hits'],['Limit it','A cavitation-resistant alloy (stainless, titanium, nickel-chromium) or a better-shaped propeller']]
+    :k.regime==='ero'?[['Anode','Bare metal where the flow has stripped the film',TK.anode],['Cathode','Metal nearby that still has its film',TK.cathode],['Limit it','Slow the flow (bigger pipe), long-radius bends, remove sand, or a tougher alloy']]
+    :[['Anode','Random spots under the film, as in uniform attack',TK.anode],['Cathode','Everywhere in between',TK.cathode],['Speed limit',`Film is stripped above about ${sig(k.vc,2)} m/s for ${k.m.name.toLowerCase()}`]];
+  const tHole=ex.wall/k.tot;
+  setRO({big:fmtRate(k.tot),unit:'mm/yr',sub:`${k.m.name} at ${sig(FLO.v,3)} m/s${FLO.sand?' · sand and bubbles':''}${FLO.smooth?' · smoother shape':''}`,stage:R[k.regime][0],cap:R[k.regime][1],ac,
+    extra:stackBar([{n:'Corrosion',v:k.rc,c:'var(--muted)',t:fmtRate(k.rc)},{n:'Erosion-corrosion',v:k.re,c:'var(--anode)',t:fmtRate(k.re)},{n:'Cavitation',v:k.rcav,c:'var(--electron)',t:fmtRate(k.rcav)}],['What the rate is made of (mm/yr)',`total ${fmtRate(k.tot)}`]),
+    math:eq('Film stripped above',res(sig(k.vc,2)+' m/s'),why(`${k.m.name}${FLO.sand?', cut by sand and bubbles':''}${FLO.smooth?', raised by the smoother shape':''}`))+
+      eq('σ =',fr('p − p<sub>v</sub>','½ ρ v²'),'=',fr('111.4 − 2.3 kPa',`½ × 1025 × ${sig(FLO.v,3)}²`),'=',res(isFinite(k.sigma)?sig(k.sigma,2):'∞'),why(k.sigma<k.si?`below ${k.si}: cavitates`:`above ${k.si}: no cavitation (starts at ${sig(k.vcav,3)} m/s)`)),
+    time:`After <b>${sig(FLO.t,2)} yr</b>: up to <b>${sig(k.tot*FLO.t,2)} mm</b> lost from the ${ex.name}. `+(tHole<=10?`A ${ex.wall} mm thickness is gone at <b>${sig(tHole,2)} years</b>.`:tHole<1000?`A ${ex.wall} mm thickness would last about <b>${sig(tHole,2)} years</b>.`:`It would last more than 1000 years.`)});
+  $('#status').innerHTML=`${k.m.name}, ${sig(FLO.v,3)} m/s · <b>year ${sig(FLO.t,2)}</b>`;
+  $('#viewNote').textContent='Cross-section of the metal surface under flowing seawater. Streaks show the flow; longer and wavier means faster and more turbulent.';}
+const MF={key:'flow',get t(){return FLO.t;},set t(v){FLO.t=v;},toU:t=>t/10,fromU:u=>u*10,label:t=>'year '+sig(t,2),dur:9,upd:updFlow,draw:drawFlow,anim:true};
+
+/* ===================================================================== shell */
+const MODES={uniform:MU,galvanic:MG,pitting:MP,crevice:MC,flow:MF};
+let mode='uniform', playing=false, raf=0, last=0;
+const PLAY='<svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z"/></svg>', PAUSE='<svg viewBox="0 0 12 12"><path d="M2 1h3v10H2zM7 1h3v10H7z"/></svg>';
+function setPlayBtn(){$('#play').innerHTML=(playing?PAUSE:PLAY)+`<span>${playing?'Pause':'Run'}</span>`;}
+function stop(){playing=false; setPlayBtn();}
+function syncTr(){const m=MODES[mode]; $('#tr').value=Math.round(m.toU(m.t)*1000); $('#trout').textContent=m.label(m.t);}
+function refresh(){const m=MODES[mode]; if(m.tick) m.tick(); m.upd(); syncTr(); m.draw(0);}
+function loop(ts){const dt=Math.min(0.05,(ts-last)/1000||0); last=ts; const m=MODES[mode];
+  if(!RM.matches) CLK+=dt;
+  if(playing){const u=Math.min(1,m.toU(m.t)+dt/m.dur); m.t=m.fromU(u); if(m.tick) m.tick(); m.upd(); syncTr(); if(u>=1) stop();}
+  m.draw(dt);
+  raf=(!document.hidden&&(!RM.matches||playing))?requestAnimationFrame(loop):0;}
+function kick(){if(!raf){last=performance.now(); raf=requestAnimationFrame(loop);}}
+function setMode(m,push){mode=m; stop(); $$('.tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.m===m));
+  for(const k of Object.keys(MODES)) $('#panel-'+k).hidden=k!==m;
+  $('#phSeg').hidden=!MODES[m].ph;
+  if(push){try{history.replaceState(null,'','#'+m);}catch(e){}}
+  refresh(); kick();}
+
+function init(){
+  // uniform
+  $$('#uEx .chip').forEach(b=>b.addEventListener('click',()=>{UNI.ex=b.dataset.x; UNI.t=UNI.ex==='plate'?12:4; refresh();}));
+  $('#uR').addEventListener('input',e=>{UNI.r=10**+e.target.value; refresh();});
+  $('#uA').addEventListener('input',e=>{UNI.allow=+e.target.value; refresh();});
+  $('#uI').addEventListener('input',e=>{UNI.I=10**+e.target.value; refresh();});
+  clickable($('#dU'),()=>axU,v=>{UNI.t=clamp(v,0,MU.tMax()); refresh();});
+  // galvanic
+  for(const id of ['mL','mR']) $('#'+id).innerHTML=METALS.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+  $('#mL').addEventListener('change',e=>{GAL.L=e.target.value; gParts=[]; refresh();}); $('#mR').addEventListener('change',e=>{GAL.R=e.target.value; gParts=[]; refresh();});
+  $('#aR').addEventListener('input',e=>{GAL.AR=10**+e.target.value; refresh();});
+  $$('#gPost .chip').forEach(b=>b.addEventListener('click',()=>{GAL.post=b.dataset.q; gParts=[]; refresh();}));
+  $$('#gEx .chip').forEach(b=>b.addEventListener('click',()=>{Object.assign(GAL,GSC[b.dataset.x],{post:'none',t:0}); gParts=[]; refresh();}));
+  $('#slotL').addEventListener('click',()=>setSlot('L')); $('#slotR').addEventListener('click',()=>setSlot('R'));
+  // pitting
+  alloyChips('#pAlloy',a=>{PIT.alloy=a; refresh();}); alloyChips('#cAlloy',a=>{CRV.alloy=a; refresh();});
+  $('#fMat').innerHTML=Object.entries(MATS).map(([key,m])=>`<button class="chip" data-m="${key}">${m.short}</button>`).join('');
+  $$('#fMat .chip').forEach(b=>b.addEventListener('click',()=>{FLO.mat=b.dataset.m; refresh();}));
+  $$('#pEx .chip').forEach(b=>b.addEventListener('click',()=>{Object.assign(PIT,PEX[b.dataset.x]); refresh();}));
+  $$('#pEnv .chip').forEach(b=>b.addEventListener('click',()=>{PIT.env=b.dataset.e; refresh();}));
+  $('#pT').addEventListener('input',e=>{PIT.T=+e.target.value; refresh();});
+  clickable($('#dP'),()=>axP,v=>{PIT.T=Math.round(clamp(v,5,80)); refresh();});
+  $('#vPlain').addEventListener('click',()=>{PIT.ph=false; $('#vPlain').setAttribute('aria-pressed',true); $('#vPH').setAttribute('aria-pressed',false); MODES[mode].draw(0);});
+  $('#vPH').addEventListener('click',()=>{PIT.ph=true; $('#vPlain').setAttribute('aria-pressed',false); $('#vPH').setAttribute('aria-pressed',true); MODES[mode].draw(0);});
+  // crevice
+  $$('#cEx .chip').forEach(b=>b.addEventListener('click',()=>{Object.assign(CRV,{alloy:'316',gap:10,T:20}); refresh();}));
+  $('#cG').addEventListener('input',e=>{CRV.gap=10**+e.target.value; refresh();});
+  $('#cT').addEventListener('input',e=>{CRV.T=+e.target.value; refresh();});
+  clickable($('#dC'),()=>axC,v=>{CRV.t=clamp(v,0.01,1000); refresh();});
+  // flow
+  $$('#fEx .chip').forEach(b=>b.addEventListener('click',()=>{const e=FEX[b.dataset.x]; Object.assign(FLO,{ex:b.dataset.x,mat:e.mat,v:e.v,sand:false,smooth:false}); refresh();}));
+  $('#fV').addEventListener('input',e=>{FLO.v=+e.target.value; refresh();});
+  $('#fSand').addEventListener('click',()=>{FLO.sand=!FLO.sand; refresh();}); $('#fSmooth').addEventListener('click',()=>{FLO.smooth=!FLO.smooth; refresh();});
+  clickable($('#dF'),()=>axF,v=>{FLO.v=Math.round(clamp(v,0,25)*10)/10; refresh();});
+  // shell
+  $$('.tab').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.m,true)));
+  $('#tr').addEventListener('input',e=>{stop(); const m=MODES[mode]; m.t=m.fromU(+e.target.value/1000); refresh();});
+  $('#play').addEventListener('click',()=>{const m=MODES[mode]; if(playing){stop(); return;} if(m.toU(m.t)>=0.999) m.t=m.fromU(0); playing=true; setPlayBtn(); kick();});
+  window.addEventListener('hashchange',()=>{const h=location.hash.slice(1); if(MODES[h]&&h!==mode) setMode(h,false);});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden) kick();});
+  const retheme=()=>{readTokens(); MODES[mode].draw(0);};
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',retheme);
+  new MutationObserver(retheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(retheme);
+}
+readTokens(); sizeCanvas(); R1=cellAt(GAL,GAL.t); init();
+if(!RM.matches){for(let i=0;i<60;i++) gStep(0.05,R1);} CLK=1.3;
+const h=location.hash.slice(1); setMode(MODES[h]?h:'uniform',false);
+})();
+</script>
